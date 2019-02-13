@@ -1,15 +1,25 @@
 from collections import Counter
 import torch
-from torchvision import transforms
 from core.utils import save_json, load_json
 from core.feature_extractor import FeatureExtractor
 from core.dataset import CocoImageDataset
 
 import numpy as np
 import os
-import json
 from tqdm import tqdm
 import argparse
+
+ANN_DIR = 'data/annotations'
+ANN_FILES = {
+    'train': 'captions_train2017.json',
+    'val': 'captions_val2017.json',
+    'test': ''
+}
+CONCEPT_FILES = {
+    'train': 'train_concepts.json',
+    'val': 'val_concepts.json',
+    'test': 'test_concepts.json'
+}
 
 """Parameters for pre-processing"""
 parser = argparse.ArgumentParser(description='Pre-processing dataset.')
@@ -70,7 +80,7 @@ def _process_caption_data(phase, ann_file=None, max_length=None):
             for idx in sorted(del_idx, reverse=True):
                 del caption_data['annotations'][idx]
             print("The number of captions after deletion: %d" %len(caption_data['annotations']))
-        
+
         save_json(caption_data, os.path.join('data', phase, ann_file.split('/')[-1]))
 
 
@@ -80,7 +90,7 @@ def _build_vocab(captions_data, threshold=1, vocab_size=0):
     max_len = 0
     for i, annotation in enumerate(annotations):
         caption = annotation['caption']
-        words = caption.split(' ') # caption contrains only lower-case words
+        words = caption.split(' ')  # caption contrains only lower-case words
         for w in words:
             counter[w] += 1
 
@@ -92,7 +102,7 @@ def _build_vocab(captions_data, threshold=1, vocab_size=0):
         vocab = [word for word in counter if counter[word] >= threshold and word in top_n_counter]
     else:
         vocab = [word for word in counter if counter[word] >= threshold]
-    
+
     print('Filtered %d words to %d words with word count threshold %d.' % (len(counter), len(vocab), threshold))
     word_to_idx = {u'<NULL>': 0, u'<START>': 1, u'<END>': 2, u'<UNK>': 3}
     idx = len(word_to_idx)
@@ -106,7 +116,6 @@ def _build_vocab(captions_data, threshold=1, vocab_size=0):
 
 def _build_caption_vector(captions_data, word_to_idx, max_length=15):
     annotations = captions_data['annotations']
-    n_examples = len(annotations)
 
     for i, annotation in enumerate(annotations):
         caption = annotation['caption']
@@ -121,7 +130,8 @@ def _build_caption_vector(captions_data, word_to_idx, max_length=15):
         captions_data['annotations'][i]['vector'] = cap_vec
 
     print("Finished building caption vectors")
-    return captions_data 
+    return captions_data
+
 
 def main():
     args = parser.parse_args()
@@ -129,14 +139,10 @@ def main():
     phases = [phase.strip() for phase in args.phases.split(',')]
 
     # annotation files to be processed
-    if sorted(phases) == sorted(['train', 'val', 'test']) and args.ann_files == '':
-        tmplt = 'data/annotations/captions_%s2017.json'
-        ann_files = [tmplt % 'train', tmplt % 'val', '']
-    else:
-        ann_files = [ann_file.strip() for ann_file in args.ann_files.split(',')]
+    ann_files = [os.path.join(ANN_DIR, ANN_FILES[phase]) for phase in phases]
 
     # batch size for extracting feature vectors.
-    batch_size = args.batch_size 
+    batch_size = args.batch_size
 
     # maximum length of caption(number of word). if caption is longer than max_length, deleted.  
     max_length = args.max_length
@@ -147,7 +153,7 @@ def main():
 
     for phase, ann_file in zip(phases, ann_files):
         _process_caption_data(phase, ann_file=ann_file, max_length=max_length)
-        
+
         if phase == 'train':
             captions_data = load_json('./data/train/captions_train2017.json')
 
