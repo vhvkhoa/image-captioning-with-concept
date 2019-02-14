@@ -92,7 +92,7 @@ def _process_concept_data(phase, word_to_idx, concept_file, max_keep=20):
     num_tags, num_concepts = [], []
 
     for dict_concept in concepts_data:
-        file_name, concepts = dict_concept.items()[0]
+        file_name = list(dict_concept.items())[0]
         concepts = sorted([[tag, int(raw_prob[:-1])] for tag, raw_prob in concepts], key=lambda x: x[1], reverse=True)
         num_tags.append(len(concepts))
         concepts = ' '.join([concept[0] for concept in concepts[:max_keep]]).split(' ')
@@ -104,6 +104,7 @@ def _process_concept_data(phase, word_to_idx, concept_file, max_keep=20):
     save_json(num_concepts, '%s_num_concepts.json' % phase)
 
     save_json(concepts_dict, os.path.join('data', phase, os.path.basename(concept_file)))
+    print('Finished building concept vectors')
 
 
 def _build_vocab(captions_data, tag_names_data, threshold=1, vocab_size=0):
