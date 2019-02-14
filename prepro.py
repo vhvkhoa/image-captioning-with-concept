@@ -45,8 +45,10 @@ parser.add_argument('-v', '--vocab_size', type=int, default=0,
                                                 help='Size of vocabulary. Vocabulary is made of vocab_size most frequent words in the dataset. '+
                                                 'Leave it to default value means not using it.')
 
-parser.add_argument('-e' '--encoder_name', default='resnet101', help='CNN model name used to extract features of images.'+
+parser.add_argument('-e' '--encoder_name', type=str, default='resnet101', help='CNN model name used to extract features of images.'+
                                                              'It should be vgg or resnet followed by a number indicating number of layers in the model (e.g vgg16, vgg19, resnet50, resnet101).')
+
+parser.add_argument('-n', '--tag_names_file', type=str, default='data/9k.names')
 
 def _process_caption_data(phase, ann_file=None, max_length=None):
     if phase in ['val', 'train']:
@@ -84,29 +86,30 @@ def _process_caption_data(phase, ann_file=None, max_length=None):
         save_json(caption_data, os.path.join('data', phase, os.path.basename(ann_file)))
 
 
-def _process_concept_data(phase, word_to_idx, concept_file, max_len=20):
+def _process_concept_data(phase, word_to_idx, concept_file, max_keep=20):
     concept_data = load_json(concept_file)
     concept_dict = {}
-    max_tag, max_concept = 0, 0
+    num_tags, num_concepts = [], []
 
     for file_name, concepts in enumerate(concept_data):
         concepts = sorted([[tag, int(raw_prob[:-1])] for tag, raw_prob in concepts], key=lambda x: x[1], reverse=True)
-        if len(concepts) > max_tag:
-            max_tag = len(concepts)
-        concepts = ' '.join([concept[0] for concept in concepts[:max_len]]).split(' ')
-        if len(concepts) > max_concept:
-            max_concept = len(concepts)
+        num_tags.append(len(concepts))
+        concepts = ' '.join([concept[0] for concept in concepts[:max_keep]]).split(' ')
+        concepts = [word_to_idx[concept] for concept in concepts]
         concept_dict[file_name] = concepts
-    print('Max tag: %d\nMax concept: %d' % (max_tag, max_concept))
+        num_concepts.append(len(concepts))
+    
+    save_json(num_tags, '%s_num_tags.json' % phase)
+    save_json(num_concepts, '%s_num_concepts.json' % phase)
 
     save_json(concept_dict, os.path.join('data', phase, os.path.basename(concept_file)))
 
 
-def _build_vocab(captions_data, threshold=1, vocab_size=0):
+def _build_vocab(captions_data, tag_names_data, threshold=1, vocab_size=0):
     annotations = captions_data['annotations']
     counter = Counter()
     max_len = 0
-    for i, annotation in enumerate(annotations):
+    for annotation in annotations:
         caption = annotation['caption']
         words = caption.split(' ')  # caption contrains only lower-case words
         for w in words:
@@ -114,7 +117,11 @@ def _build_vocab(captions_data, threshold=1, vocab_size=0):
 
         if len(caption.split(' ')) > max_len:
             max_len = len(caption.split(' '))
-
+    
+    tag_names = tag_names_data.replace('\n', ' ').split(' ')
+    for name in tag_names:
+        counter[name] += 1
+        
     if vocab_size > 0:
         top_n_counter = [w for w, n in counter.most_common(vocab_size)]
         vocab = [word for word in counter if counter[word] >= threshold and word in top_n_counter]
@@ -132,7 +139,7 @@ def _build_vocab(captions_data, threshold=1, vocab_size=0):
     return word_to_idx
 
 
-def _build_caption_vector(captions_data, word_to_idx, max_length=15):
+def _build_caption_vector(captions_data, word_to_idx):
     annotations = captions_data['annotations']
 
     for i, annotation in enumerate(annotations):
@@ -170,18 +177,24 @@ def main():
     word_count_threshold = args.word_count_threshold
     vocab_size = args.vocab_size
 
+    # names list
+    with open(args.tag_names_file, 'r') as f:
+        tag_names_data = f.read()
+
     for phase, ann_file, concept_file in zip(phases, ann_files, concept_files):
         _process_caption_data(phase, ann_file=ann_file, max_length=max_length)
-        _process_concept_data(concept_file=concept_file)
 
         if phase == 'train':
             captions_data = load_json('./data/train/captions_train2017.json')
 
-            word_to_idx = _build_vocab(captions_data, threshold=word_count_threshold, vocab_size=vocab_size)
+            word_to_idx = _build_vocab(captions_data, tag_names_data, threshold=word_count_threshold, vocab_size=vocab_size)
             save_json(word_to_idx, './data/word_to_idx.json')
 
-            new_captions_data = _build_caption_vector(captions_data, word_to_idx=word_to_idx, max_length=max_length)
+            new_captions_data = _build_caption_vector(captions_data, word_to_idx=word_to_idx)
             save_json(new_captions_data, ann_file)
+        
+        word_to_idx = load_json('./data/word_to_idx.json')
+        _process_concept_data(phase, word_to_idx, concept_file)
 
     print('Finished processing caption data')
 
