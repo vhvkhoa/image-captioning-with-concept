@@ -108,16 +108,12 @@ def _process_concept_data(phase, word_to_idx, concept_file, max_keep=20):
 def _build_vocab(captions_data, tag_names_data, threshold=1, vocab_size=0):
     annotations = captions_data['annotations']
     counter = Counter()
-    max_len = 0
     for annotation in annotations:
         caption = annotation['caption']
         words = caption.split(' ')  # caption contrains only lower-case words
         for w in words:
             counter[w] += 1
 
-        if len(caption.split(' ')) > max_len:
-            max_len = len(caption.split(' '))
-    
     tag_names = tag_names_data.replace('\n', ' ').split(' ')
     for name in tag_names:
         counter[name] += 1
@@ -135,7 +131,6 @@ def _build_vocab(captions_data, tag_names_data, threshold=1, vocab_size=0):
         word_to_idx[word] = idx
         idx += 1
 
-    print("Max length of caption: ", max_len)
     return word_to_idx
 
 
