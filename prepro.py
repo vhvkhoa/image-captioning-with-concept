@@ -13,7 +13,7 @@ ANN_DIR = 'data/annotations'
 ANN_FILES = {
     'train': 'captions_train2017.json',
     'val': 'captions_val2017.json',
-    'test': 'image_info_test2017.json'
+    'test': 'image_info_test2014.json'
 }
 CONCEPT_FILES = {
     'train': 'train_concepts.json',
