@@ -92,7 +92,7 @@ def _process_concept_data(phase, word_to_idx, concept_file, max_keep=20):
     num_tags, num_concepts = [], []
 
     for dict_concept in concepts_data:
-        file_name = list(dict_concept.items())[0]
+        file_name, concepts = list(dict_concept.items())[0]
         concepts = sorted([[tag, int(raw_prob[:-1])] for tag, raw_prob in concepts], key=lambda x: x[1], reverse=True)
         num_tags.append(len(concepts))
         concepts = ' '.join([concept[0] for concept in concepts[:max_keep]]).split(' ')
