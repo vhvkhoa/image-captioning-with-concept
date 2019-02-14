@@ -2,8 +2,8 @@ from torch.utils.data.dataset import Dataset
 from torchvision import transforms
 from PIL import Image
 import numpy as np
-import json
 import os
+from .utils import load_json
 
 class CocoImageDataset(Dataset):
     def __init__(self, root, image_paths):
@@ -27,19 +27,18 @@ class CocoImageDataset(Dataset):
 class CocoCaptionDataset(Dataset):
     def __init__(self, caption_file, split='train'):
         self.split = split
-        with open(caption_file, 'r') as f:
-            dataset = json.load(f)
+        dataset = load_json(caption_file)
         if split == 'train':
             self.dataset = dataset['annotations']
-            self.word_to_idx = json.load(open('data/word_to_idx.json', 'r'))
+            self.word_to_idx = load_json('data/word_to_idx.json')
         else:
             self.dataset = dataset['images']
-    
+
     def __getitem__(self, index):
         item = self.dataset[index]
         feature_path = os.path.join('data', self.split, 'feats', item['file_name'] + '.npy')
         feature = np.load(feature_path)
-        
+
         if self.split == 'train':
             caption = item['caption']
             cap_vec = item['vector']

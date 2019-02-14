@@ -81,7 +81,25 @@ def _process_caption_data(phase, ann_file=None, max_length=None):
                 del caption_data['annotations'][idx]
             print("The number of captions after deletion: %d" %len(caption_data['annotations']))
 
-        save_json(caption_data, os.path.join('data', phase, ann_file.split('/')[-1]))
+        save_json(caption_data, os.path.join('data', phase, os.path.basename(ann_file)))
+
+
+def _process_concept_data(phase, word_to_idx, concept_file, max_len=20):
+    concept_data = load_json(concept_file)
+    concept_dict = {}
+    max_tag, max_concept = 0, 0
+
+    for file_name, concepts in enumerate(concept_data):
+        concepts = sorted([[tag, int(raw_prob[:-1])] for tag, raw_prob in concepts], key=lambda x: x[1], reverse=True)
+        if len(concepts) > max_tag:
+            max_tag = len(concepts)
+        concepts = ' '.join([concept[0] for concept in concepts[:max_len]]).split(' ')
+        if len(concepts) > max_concept:
+            max_concept = len(concepts)
+        concept_dict[file_name] = concepts
+    print('Max tag: %d\nMax concept: %d' % (max_tag, max_concept))
+
+    save_json(concept_dict, os.path.join('data', phase, os.path.basename(concept_file)))
 
 
 def _build_vocab(captions_data, threshold=1, vocab_size=0):
@@ -138,8 +156,9 @@ def main():
     # phases to be processed.
     phases = [phase.strip() for phase in args.phases.split(',')]
 
-    # annotation files to be processed
+    # annotation files and concept files to be processed
     ann_files = [os.path.join(ANN_DIR, ANN_FILES[phase]) for phase in phases]
+    concept_files = [os.path.join(ANN_DIR, CONCEPT_FILES[phase]) for phase in phases]
 
     # batch size for extracting feature vectors.
     batch_size = args.batch_size
@@ -151,8 +170,9 @@ def main():
     word_count_threshold = args.word_count_threshold
     vocab_size = args.vocab_size
 
-    for phase, ann_file in zip(phases, ann_files):
+    for phase, ann_file, concept_file in zip(phases, ann_files, concept_files):
         _process_caption_data(phase, ann_file=ann_file, max_length=max_length)
+        _process_concept_data(concept_file=concept_file)
 
         if phase == 'train':
             captions_data = load_json('./data/train/captions_train2017.json')
