@@ -50,40 +50,40 @@ parser.add_argument('-e' '--encoder_name', type=str, default='resnet101', help='
 
 parser.add_argument('-n', '--tag_names_file', type=str, default='data/9k.names')
 
-def _process_caption_data(phase, ann_file=None, max_length=None):
+def _process_captions_data(phase, ann_file=None, max_length=None):
     if phase in ['val', 'train']:
-        caption_data = load_json(ann_file)
+        captions_data = load_json(ann_file)
 
         if phase == 'val':
-            caption_data['type'] = 'caption'
+            captions_data['type'] = 'caption'
 
         # id_to_filename is a dictionary such as {image_id: filename]} 
-        id_to_filename = {image['id']: image['file_name'] for image in caption_data['images']}
+        id_to_filename = {image['id']: image['file_name'] for image in captions_data['images']}
 
         # data is a list of dictionary which contains 'captions', 'file_name' and 'image_id' as key.
-        for i, annotation in enumerate(caption_data['annotations']):
+        for i, annotation in enumerate(captions_data['annotations']):
             image_id = annotation['image_id']
-            caption_data['annotations'][i]['file_name'] = id_to_filename[image_id]
+            captions_data['annotations'][i]['file_name'] = id_to_filename[image_id]
 
         if phase == 'train':
             del_idx = []
-            for i, annotation in enumerate(caption_data['annotations']):
+            for i, annotation in enumerate(captions_data['annotations']):
                 caption = annotation['caption']
                 caption = caption.replace('.','').replace(',','').replace("'",'').replace('"','')
                 caption = caption.replace('&','and').replace('(','').replace(')','').replace('-',' ')
                 caption = ' '.join(caption.split())  # replace multiple spaces
 
-                caption_data['annotations'][i]['caption'] = caption.lower()
+                captions_data['annotations'][i]['caption'] = caption.lower()
                 if max_length != None and len(caption.split(' ')) > max_length:
                     del_idx.append(i)
 
             # delete captions if size is larger than max_length
-            print("The number of captions before deletion: %d" %len(caption_data['annotations']))
+            print("The number of captions before deletion: %d" %len(captions_data['annotations']))
             for idx in sorted(del_idx, reverse=True):
-                del caption_data['annotations'][idx]
-            print("The number of captions after deletion: %d" %len(caption_data['annotations']))
+                del captions_data['annotations'][idx]
+            print("The number of captions after deletion: %d" %len(captions_data['annotations']))
 
-        save_json(caption_data, os.path.join('data', phase, os.path.basename(ann_file)))
+        return captions_data
 
 
 def _process_concept_data(phase, word_to_idx, concept_file, max_keep=20):
@@ -177,17 +177,16 @@ def main():
         tag_names_data = f.read()
 
     for phase, ann_file, concept_file in zip(phases, ann_files, concept_files):
-        _process_caption_data(phase, ann_file=ann_file, max_length=max_length)
+        captions_data = _process_captions_data(phase, ann_file=ann_file, max_length=max_length)
 
         if phase == 'train':
-            captions_data = load_json('./data/train/captions_train2017.json')
-
             word_to_idx = _build_vocab(captions_data, tag_names_data, threshold=word_count_threshold, vocab_size=vocab_size)
             save_json(word_to_idx, './data/word_to_idx.json')
 
-            new_captions_data = _build_caption_vector(captions_data, word_to_idx=word_to_idx)
-            save_json(new_captions_data, ann_file)
-        
+            captions_data = _build_caption_vector(captions_data, word_to_idx=word_to_idx)
+
+        save_json(captions_data, os.path.join('data', phase, os.path.basename(ann_file)))
+
         word_to_idx = load_json('./data/word_to_idx.json')
         _process_concept_data(phase, word_to_idx, concept_file)
 
