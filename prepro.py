@@ -87,22 +87,23 @@ def _process_captions_data(phase, ann_file=None, max_length=None):
 
 
 def _process_concept_data(phase, word_to_idx, concept_file, max_keep=20):
-    concept_data = load_json(concept_file)
-    concept_dict = {}
+    concepts_data = load_json(concept_file)
+    concepts_dict = {}
     num_tags, num_concepts = [], []
 
-    for file_name, concepts in enumerate(concept_data):
+    for dict_concept in concepts_data:
+        file_name, concepts = dict_concept.items()[0]
         concepts = sorted([[tag, int(raw_prob[:-1])] for tag, raw_prob in concepts], key=lambda x: x[1], reverse=True)
         num_tags.append(len(concepts))
         concepts = ' '.join([concept[0] for concept in concepts[:max_keep]]).split(' ')
         concepts = [word_to_idx[concept] for concept in concepts]
-        concept_dict[file_name] = concepts
+        concepts_dict[file_name] = concepts
         num_concepts.append(len(concepts))
     
     save_json(num_tags, '%s_num_tags.json' % phase)
     save_json(num_concepts, '%s_num_concepts.json' % phase)
 
-    save_json(concept_dict, os.path.join('data', phase, os.path.basename(concept_file)))
+    save_json(concepts_dict, os.path.join('data', phase, os.path.basename(concept_file)))
 
 
 def _build_vocab(captions_data, tag_names_data, threshold=1, vocab_size=0):
