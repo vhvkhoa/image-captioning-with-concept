@@ -13,7 +13,7 @@ ANN_DIR = 'data/annotations'
 ANN_FILES = {
     'train': 'captions_train2017.json',
     'val': 'captions_val2017.json',
-    'test': ''
+    'test': 'image_info_test2017.json'
 }
 CONCEPT_FILES = {
     'train': 'train_concepts.json',
@@ -99,12 +99,12 @@ def _process_concept_data(phase, word_to_idx, concept_file, max_keep=20):
         concepts = [word_to_idx[concept] for concept in concepts]
         concepts_dict[file_name] = concepts
         num_concepts.append(len(concepts))
-    
+
     save_json(num_tags, '%s_num_tags.json' % phase)
     save_json(num_concepts, '%s_num_concepts.json' % phase)
 
     save_json(concepts_dict, os.path.join('data', phase, os.path.basename(concept_file)))
-    print('Finished building concept vectors')
+    print('Finished building %s concept vectors' % phase)
 
 
 def _build_vocab(captions_data, tag_names_data, threshold=1, vocab_size=0):
@@ -151,7 +151,7 @@ def _build_caption_vector(captions_data, word_to_idx):
         cap_vec.append(word_to_idx['<END>'])
         captions_data['annotations'][i]['vector'] = cap_vec
 
-    print("Finished building caption vectors")
+    print('Finished building train caption vectors')
     return captions_data
 
 
