@@ -17,7 +17,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class CaptionGenerator(nn.Module):
-    def __init__(self, feature_dim=[196, 512], embed_dim=512, hidden_dim=1024,
+    def __init__(self, feature_dim=[196, 512], tags_dim=[15, 512], embed_dim=512, hidden_dim=1024,
                   prev2out=True, ctx2out=True, enable_selector=True, dropout=0.5, len_vocab=10000):
         super(CaptionGenerator, self).__init__()
         self.prev2out = prev2out
@@ -25,13 +25,16 @@ class CaptionGenerator(nn.Module):
         self.enable_selector = enable_selector
         self.dropout = dropout
         self.V = len_vocab
-        self.L = feature_dim[0]
-        self.D = feature_dim[1]
+        self.L_img = feature_dim[0] #number of regions
+        self.D_img = feature_dim[1] #size of each region feature
+        self.L_tags = tags_dim[0] #number of tags
+        self.D_tags = tags_dim[1] #size of tag_vector
+        self.D = self.D_img + self.D_tags #concatinatel
         self.M = embed_dim
         self.H = hidden_dim 
         
         # Trainable parameters :
-        self.lstm_cell = nn.LSTM(self.D + self.M, self.H, dropout=0.5)
+        self.lstm_cell = nn.LSTM(self.D + + self.M, self.H, dropout=0.5)
         self.hidden_state_init_layer = nn.Linear(self.D, self.H)
         self.cell_state_init_layer = nn.Linear(self.D, self.H)
         self.embedding_lookup = nn.Embedding(self.V, self.M)
