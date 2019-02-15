@@ -15,7 +15,7 @@ class BeamSearchDecoder(object):
     def compute_score(self, logits, beam_scores):
         return F.log_softmax(logits, dim=-1) + beam_scores.unsqueeze(-1)
     
-    def decode(self, features):
+    def decode(self, features, tags):
         with torch.no_grad():
             features = features.to(device=self.device)
             features = self.model.batch_norm(features)

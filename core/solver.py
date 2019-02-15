@@ -13,17 +13,18 @@ from .dataset import CocoCaptionDataset
 from .beam_decoder import BeamSearchDecoder 
 
 def pack_collate_fn(batch):
-    features, cap_vecs, captions = zip(*batch)
+    features, tags, cap_vecs, captions = zip(*batch)
 
     len_sorted_idx = sorted(range(len(cap_vecs)), key=lambda x: len(cap_vecs[x]), reverse=True)
     len_sorted_cap_vecs = [np.array(cap_vecs[i]) for i in len_sorted_idx]
     len_sorted_features = torch.tensor([features[i] for i in len_sorted_idx])
+    len_sorted_tags = torch.tensor([tags[i] for i in len_sorted_idx])
     len_sorted_captions = [captions[i] for i in len_sorted_idx]
     seq_lens = torch.tensor([[len(cap_vec)] for cap_vec in len_sorted_cap_vecs], dtype=torch.float)
 
     packed_cap_vecs = nn.utils.rnn.pack_sequence([torch.from_numpy(cap_vec) for cap_vec in len_sorted_cap_vecs])
 
-    return len_sorted_features, packed_cap_vecs, len_sorted_captions, seq_lens
+    return len_sorted_features, len_sorted_tags, packed_cap_vecs, len_sorted_captions, seq_lens
 
 class CaptioningSolver(object):
     def __init__(self, model, word_to_idx, train_dataset, val_dataset, **kwargs):
@@ -110,8 +111,8 @@ class CaptioningSolver(object):
         self.start_iter = checkpoint['iteration'] + 1
     
     def training_start_handler(self, engine):
-        iteration = self.start_iter 
-        epoch = int(self.start_iter // len(self.train_loader))
+        engine.state.iteration = self.start_iter
+        engine.state.epoch = int(self.start_iter // len(self.train_loader))
     
     def training_end_iter_handler(self, engine):
         iteration = engine.state.iteration
@@ -137,41 +138,49 @@ class CaptioningSolver(object):
         self.model.train()
         self.optimizer.zero_grad()
 
-        features, packed_cap_vecs, captions, seq_lens = batch
+        features, tags, packed_cap_vecs, captions, seq_lens = batch
         features = features.to(device=self.device)
+        tags = tags.to(device=self.device)
         seq_lens = seq_lens.to(device=self.device)
 
         cap_vecs, batch_sizes = packed_cap_vecs
         cap_vecs = cap_vecs.to(device=self.device)
         batch_sizes = batch_sizes.to(device=self.device)
         features = self.model.batch_norm(features)
+        tags_embed = self.model.word_embedding(tags)
         features_proj = self.model.project_features(features)
-        hidden_states, cell_states = self.model.get_initial_lstm(features)
+        tags_proj = self.model.project_tags(tags_embed)
+        hidden_states, cell_states = self.model.get_initial_lstm(features_proj, tags_proj)
 
         loss = 0
         acc = 0.
-        alphas = []
+        feats_alphas, tags_alphas = [], []
 
         start_idx = 0
         for i in range(len(batch_sizes)-1):
             end_idx = start_idx + batch_sizes[i]
             curr_cap_vecs = cap_vecs[start_idx:end_idx]
 
-            logits, alpha, (hidden_states, cell_states) = self.model(features[:batch_sizes[i]],
+            logits, feats_alpha, tags_alpha, (hidden_states, cell_states) = self.model(features[:batch_sizes[i]],
                                                                      features_proj[:batch_sizes[i]],
+                                                                     tags_embed[:batch_sizes[i]],
+                                                                     tags_proj[:batch_sizes[i]],
                                                                      curr_cap_vecs,
                                                                      hidden_states[:, :batch_sizes[i]],
                                                                      cell_states[:, :batch_sizes[i]])
             loss += self.word_criterion(logits[:batch_sizes[i+1]], cap_vecs[end_idx:end_idx+batch_sizes[i+1]])
             acc += torch.sum(torch.argmax(logits, dim=-1)[:batch_sizes[i+1]] == cap_vecs[end_idx:end_idx+batch_sizes[i+1]])
 
-            alphas.append(alpha)
+            feats_alphas.append(feats_alpha)
+            tags_alphas.append(tags_alpha)
             start_idx = end_idx
         
         if self.alpha_c > 0:
-            sum_loc_alphas = torch.sum(nn.utils.rnn.pad_sequence(alphas), 1)
-            alphas_reg = self.alpha_c * self.alpha_criterion(sum_loc_alphas, (seq_lens / self.model.L).repeat(1, self.model.L))
-            loss += alphas_reg
+            sum_loc_alphas = torch.sum(nn.utils.rnn.pad_sequence(feats_alphas), 1)
+            sum_tags_alphas = torch.sum(nn.utils.rnn.pad_sequence(tags_alphas), 1)
+            feats_alphas_reg = self.alpha_c * self.alpha_criterion(sum_loc_alphas, (seq_lens / self.model.L).repeat(1, self.model.L))
+            tags_alphas_reg = self.alpha_c * self.alpha_criterion(sum_tags_alphas, (seq_lens / self.model.T).repeat(1, self.model.T))
+            loss += feats_alphas_reg + tags_alphas_reg
 
         loss /= batch_sizes[0]
         loss.backward()
@@ -195,8 +204,8 @@ class CaptioningSolver(object):
 
     def _test(self, engine, batch):
         self.model.eval()
-        features, image_ids = batch
-        cap_vecs = self.beam_decoder.decode(features)
+        features, tags, image_ids = batch
+        cap_vecs = self.beam_decoder.decode(features, tags)
         captions = decode_captions(cap_vecs.cpu().numpy(), self.idx_to_word)
         image_ids = image_ids.numpy()
         engine.state.captions = engine.state.captions + [{'image_id': int(image_id), 'caption': caption} for image_id, caption in zip(image_ids, captions)]

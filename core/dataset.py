@@ -25,7 +25,7 @@ class CocoImageDataset(Dataset):
 
 
 class CocoCaptionDataset(Dataset):
-    def __init__(self, caption_file, split='train'):
+    def __init__(self, caption_file, concept_file, split='train'):
         self.split = split
         dataset = load_json(caption_file)
         if split == 'train':
@@ -33,17 +33,19 @@ class CocoCaptionDataset(Dataset):
             self.word_to_idx = load_json('data/word_to_idx.json')
         else:
             self.dataset = dataset['images']
+        self.concepts = load_json(concept_file)
 
     def __getitem__(self, index):
         item = self.dataset[index]
         feature_path = os.path.join('data', self.split, 'feats', item['file_name'] + '.npy')
         feature = np.load(feature_path)
+        concept = self.concepts[item['image_id']]
 
         if self.split == 'train':
             caption = item['caption']
             cap_vec = item['vector']
-            return feature, cap_vec, caption
-        return feature, item['id']
+            return feature, concept, cap_vec, caption
+        return feature, concept, item['id']
 
     def __len__(self, ):
         return len(self.dataset)

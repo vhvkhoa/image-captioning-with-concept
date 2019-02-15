@@ -25,13 +25,12 @@ class CaptionGenerator(nn.Module):
         self.enable_selector = enable_selector
         self.dropout = dropout
         self.V = len_vocab
-        self.L_img = feature_dim[0] #number of regions
-        self.D_img = feature_dim[1] #size of each region feature
-        self.L_tags = tags_dim[0] #number of tags
-        self.D_tags = tags_dim[1] #size of tag_vector
-        self.D = self.D_img + self.D_tags #concatinatel
+        self.L = feature_dim[0] #number of regions
+        self.D = feature_dim[1] #size of each region feature
+        self.T = tags_dim[0] #number of tags
         self.M = embed_dim
-        self.H = hidden_dim 
+        self.F = self.D + self.M # Fusion
+        self.H = hidden_dim
         
         # Trainable parameters :
         self.lstm_cell = nn.LSTM(self.D + self.M, self.H, dropout=0.5)
@@ -39,24 +38,28 @@ class CaptionGenerator(nn.Module):
         self.cell_state_init_layer = nn.Linear(self.D, self.H)
         self.embedding_lookup = nn.Embedding(self.V, self.M)
         self.feats_proj_layer = nn.Linear(self.D, self.D)
-        self.hidden_to_attention_layer = nn.Linear(self.H, self.D_img)
-        self.hidden_to_tags_attention_layer = nn.Linear(self.H, self.D_tags) 
-        self.attention_layer = nn.Linear(self.D_img, 1)
-        self.tags_attention_layer = nn.Linear(self.D_tags, 1)
-        self.selector_layer = nn.Linear(self.H, 1)
+        self.tags_proj_layer = nn.Linear(self.M, self.D)
+        self.hidden_to_features_attention_layer = nn.Linear(self.H, self.D)
+        self.hidden_to_tags_attention_layer = nn.Linear(self.H, self.M) 
+        self.features_attention_layer = nn.Linear(self.D, 1)
+        self.tags_attention_layer = nn.Linear(self.M, 1)
+
+        self.features_selector_layer = nn.Linear(self.H, 1)
+        self.tags_selector_layer = nn.Linear(self.H, 1)
+
         self.hidden_to_embedding_layer = nn.Linear(self.H, self.M)
-        self.context_to_embedding_layer = nn.Linear(self.D, self.M)
+        self.features_context_to_embedding_layer = nn.Linear(self.D, self.M)
         self.embedding_to_output_layer = nn.Linear(self.M, self.V)
 
         # functional layers
-        self.features_batch_norm = nn.BatchNorm1d(self.L_img)
-        self.tags_batch_norm = nn.BatchNorm1d(self.L_tags)
+        self.features_batch_norm = nn.BatchNorm1d(self.L)
         self.dropout = nn.Dropout(p=dropout)
 
-    def get_initial_lstm(self, features):
-        features_mean = torch.mean(features, 1)
-        h = torch.tanh(self.hidden_state_init_layer(features_mean)).unsqueeze(0)
-        c = torch.tanh(self.cell_state_init_layer(features_mean)).unsqueeze(0)
+    def get_initial_lstm(self, feats_proj, tags_proj):
+        feats_mean = torch.mean(feats_proj, 1)
+        tags_mean = torch.mean(tags_proj, 1)
+        h = torch.tanh(self.hidden_state_init_layer(feats_mean + tags_mean)).unsqueeze(0)
+        c = torch.tanh(self.cell_state_init_layer(feats_mean + tags_mean)).unsqueeze(0)
         return c, h
 
     def project_features(self, features):
@@ -68,36 +71,28 @@ class CaptionGenerator(nn.Module):
     def batch_norm(self, x):
         return self.features_batch_norm(x)
 
-    def _word_embedding(self, inputs):
+    def word_embedding(self, inputs):
         embed_inputs = self.embedding_lookup(inputs)  # (N, T, M) or (N, M)
         return embed_inputs
 
-    ## computing tags attention
-    def _tags_attention_layer(self, tag_features, features_proj, hidden_states):
-        h_att_tags = F.relu(tag_features + self.hidden_to__tags_attention_layer(hidden_states[-1]).unsqueeze(1))
-        out_att_tags = self.tags_attention_layer(h_att_tags.view(-1, self.D_tags)).view(-1, self.L_tags)
-        alpha_tags = F.softmax(out_att_tags, dim=-1)
-        context_tags = torch.sum(tag_features * alpha_tags.unsqueeze(2), 1)
-        return context_tags, alpha_tags
-
-    def _attention_layer(self, features, features_proj, hidden_states):
-        h_att = F.relu(features + self.hidden_to_attention_layer(hidden_states[-1]).unsqueeze(1))    # (N, L, D)
-        out_att = self.attention_layer(h_att.view(-1, self.D_img)).view(-1, self.L_img)   # (N, L)
+    def _attention_layer(self, features, features_proj, hidden_states, attention_layer):
+        h_att = F.relu(features_proj + self.hidden_to_attention_layer(hidden_states[-1]).unsqueeze(1))    # (N, L, D)
+        out_att = attention_layer(h_att.view(-1, self.D_img)).view(-1, self.L_img)   # (N, L)
         alpha = F.softmax(out_att, dim=-1)
         context = torch.sum(features * alpha.unsqueeze(2), 1)   #(N, D)
         return context, alpha
 
-    def _selector(self, context, hidden_states):
-        beta = torch.sigmoid(self.selector_layer(hidden_states[-1]))    # (N, 1)
+    def _selector(self, context, hidden_states, selector_layer):
+        beta = torch.sigmoid(selector_layer(hidden_states[-1]))    # (N, 1)
         context = context * beta
         return context, beta
 
-    def _decode_lstm(self, x, h, context):
+    def _decode_lstm(self, x, h, feats_context, tags_context):
         h = self.dropout(h)
         h_logits = self.hidden_to_embedding_layer(h)
 
         if self.ctx2out:
-            h_logits += self.context_to_embedding_layer(context)
+            h_logits += self.context_to_embedding_layer(feats_context) + tags_context
 
         if self.prev2out:
             h_logits += x
@@ -107,21 +102,20 @@ class CaptionGenerator(nn.Module):
         out_logits = self.embedding_to_output_layer(h_logits)
         return out_logits
     
-    def forward(self, features, tag_features, features_proj, past_captions, hidden_states, cell_states):
-        emb_captions = self._word_embedding(inputs=past_captions)
+    def forward(self, features, features_proj, tags_embed, tags_proj, past_captions, hidden_states, cell_states):
+        emb_captions = self.word_embedding(inputs=past_captions)
 
-        context_img, alpha_img = self._attention_layer(features, features_proj, hidden_states)
-        context_tags, alpha_tags = self._tags_attention_layer(tag_features, features_proj, hidden_states)
-
-        context = torch.cat((context_img, context_tags), 1).unsqueeze(0)
+        feats_context, feats_alpha = self._attention_layer(features, features_proj, hidden_states, self.features_attention_layer)
+        tags_context, tags_alpha = self._attention_layer(tags_embed, tags_proj, hidden_states, self.tags_attention_layer)
 
         if self.enable_selector:
-            context, beta = self._selector(context, hidden_states)
+            feats_context, feats_beta = self._selector(feats_context, hidden_states, self.features_selector_layer)
+            tags_context, tags_beta = self._selector(tags_context, hidden_states, self.tags_selector_layer)
 
-        next_input = torch.cat((emb_captions, context), 1).unsqueeze(0)
+        next_input = torch.cat((emb_captions, feats_context, tags_context), 1).unsqueeze(0)
 
         output, (next_hidden_states, next_cell_states) = self.lstm_cell(next_input, (hidden_states, cell_states))
 
-        logits = self._decode_lstm(emb_captions, output.squeeze(0), context)
+        logits = self._decode_lstm(emb_captions, output.squeeze(0), feats_context, tags_context)
 
-        return logits, alpha, (next_hidden_states, next_cell_states)
+        return logits, feats_alpha, tags_alpha, (next_hidden_states, next_cell_states)
