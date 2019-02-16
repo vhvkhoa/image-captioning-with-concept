@@ -39,7 +39,7 @@ class CocoCaptionDataset(Dataset):
         item = self.dataset[index]
         feature_path = os.path.join('data', self.split, 'feats', item['file_name'] + '.npy')
         feature = np.load(feature_path)
-        concept = self.concepts[item['image_id']]
+        concept = self.concepts[item['file_name']]
 
         if self.split == 'train':
             caption = item['caption']

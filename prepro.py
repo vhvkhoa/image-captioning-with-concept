@@ -99,7 +99,7 @@ def _process_concept_data(phase, word_to_idx, concept_file, max_keep=20):
         concepts_dict[file_name] = concepts
         max_len = len(concepts) if max_len < len(concepts) else max_len
 
-    print('Max number of concepts: ', max_len)
+    print('Max number of word-concepts: ', max_len)
     for file_name in concepts_dict.keys():
         concepts = concepts_dict[file_name]
         concepts = np.pad(concepts, (0, max_len - len(concepts)), 'constant', constant_values=word_to_idx['<NULL>'])
