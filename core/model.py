@@ -64,10 +64,10 @@ class CaptionGenerator(nn.Module):
         return c, h
 
     def project_features(self, features, project_layer):
-        dim1, dim2 = features.size(1), features.size(2)
-        features_flat = features.view(-1, dim2)
+        batch, loc, dim = features.size()
+        features_flat = features.view(-1, dim)
         features_proj = F.relu(project_layer(features_flat))
-        features_proj = features_proj.view(-1, dim1, dim2)
+        features_proj = features_proj.view(batch, loc, -1)
         return features_proj
 
     def batch_norm(self, x):
