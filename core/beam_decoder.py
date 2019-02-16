@@ -19,8 +19,10 @@ class BeamSearchDecoder(object):
         with torch.no_grad():
             features = features.to(device=self.device)
             features = self.model.batch_norm(features)
+            tags_embed = self.model.word_embedding(tags)
             features_proj = self.model.project_features(features)
-            hidden_states, cell_states = self.model.get_initial_lstm(features)
+            tags_proj = self.model.project_tags(tags_embed)
+            hidden_states, cell_states = self.model.get_initial_lstm(features_proj, tags_proj)
             beam_hidden_states = hidden_states.unsqueeze(0)
             beam_cell_states = cell_states.unsqueeze(0)
 
@@ -39,8 +41,10 @@ class BeamSearchDecoder(object):
                 beam_logits, next_beam_hidden_states, next_beam_cell_states= [], [], [] 
 
                 for b in range(beam_size):
-                    logits, alpha, (hidden_states, cell_states) = self.model(features,
+                    logits, feats_alpha, tags_alpha, (hidden_states, cell_states) = self.model(features,
                                                                             features_proj,
+                                                                            tags_embed,
+                                                                            tags_proj,
                                                                             beam_inputs[:, b],
                                                                             beam_hidden_states[b],
                                                                             beam_cell_states[b])
@@ -93,29 +97,3 @@ class BeamSearchDecoder(object):
 
         # Remove <START> token
         return cand_symbols[:, 1:]
-
-class GreedySearchDecoder(object):
-    def __init__(self, model, device, vocab_size, start_token, stop_token, n_time_steps):
-        self.model = model
-        self.device = device
-        self.vocab_size = vocab_size
-        self._start = start_token
-        self._end = stop_token
-        self.n_time_steps = n_time_steps
-
-    def decode(self, features):
-        features = features.to(device=self.device)
-        features = self.model.batch_norm(features)
-        features_proj = self.model.project_features(features)
-        hidden_states, cell_states = self.model.get_initial_lstm(features)
-        beam_hidden_states = hidden_states
-        beam_cell_states = cell_states
-        inputs = torch.full(batch_size, self._start, dtype=torch.int64, device=self.device)
-        outputs = []
-
-        for t in range(self.n_time_steps):
-            logits, alpha, (hidden_states, cell_states) = self.model(features, features_proj,
-                                                                     inputs, hidden_states, cell_states)
-
-            inputs = torch.argmax(logits, dim=-1)
-            outputs.append(inputs.detach().cpu())
