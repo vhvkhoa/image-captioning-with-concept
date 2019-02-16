@@ -31,7 +31,7 @@ class CaptionGenerator(nn.Module):
         self.M = embed_dim
         self.F = self.D + self.M # Fusion
         self.H = hidden_dim
-        
+
         # Trainable parameters :
         self.lstm_cell = nn.LSTM(self.D + self.M, self.H, dropout=0.5)
         self.hidden_state_init_layer = nn.Linear(self.D, self.H)
@@ -62,9 +62,9 @@ class CaptionGenerator(nn.Module):
         c = torch.tanh(self.cell_state_init_layer(feats_mean + tags_mean)).unsqueeze(0)
         return c, h
 
-    def project_features(self, features):
+    def project_features(self, features, project_layer):
         features_flat = features.view(-1, self.D)
-        features_proj = F.relu(self.feats_proj_layer(features_flat))
+        features_proj = F.relu(project_layer(features_flat))
         features_proj = features_proj.view(-1, self.L, self.D)
         return features_proj
 

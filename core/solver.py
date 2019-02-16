@@ -14,7 +14,6 @@ from .beam_decoder import BeamSearchDecoder
 
 def pack_collate_fn(batch):
     features, tags, cap_vecs, captions = zip(*batch)
-    print(tags)
 
     len_sorted_idx = sorted(range(len(cap_vecs)), key=lambda x: len(cap_vecs[x]), reverse=True)
     len_sorted_cap_vecs = [np.array(cap_vecs[i]) for i in len_sorted_idx]
@@ -95,7 +94,7 @@ class CaptioningSolver(object):
             self.start_iter = 1
 
         self.writer = SummaryWriter(self.log_path, purge_step=self.start_iter*len(self.train_loader))
-    
+
     def _save(self, epoch, iteration, loss):
         torch.save({
                     'epoch': epoch,
@@ -104,17 +103,17 @@ class CaptioningSolver(object):
                     'optimizer_state_dict': self.optimizer.state_dict(),
                     'loss': loss
                     }, os.path.join(self.checkpoint_dir, str(iteration) + '.pth'))
-    
+
     def _load(self, model_path):
         checkpoint = torch.load(model_path)
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         self.start_iter = checkpoint['iteration'] + 1
-    
+
     def training_start_handler(self, engine):
         engine.state.iteration = self.start_iter
         engine.state.epoch = int(self.start_iter // len(self.train_loader))
-    
+
     def training_end_iter_handler(self, engine):
         iteration = engine.state.iteration
         epoch = engine.state.epoch
@@ -131,10 +130,10 @@ class CaptioningSolver(object):
 
         if iteration % self.snapshot_steps == 0:
             self._save(epoch, iteration, loss)
-    
+
     def training_end_epoch_handler(self, engine):
         self._save(engine.state.epoch, engine.state.iteration, engine.state.output[0])
-    
+
     def _train(self, engine, batch):
         self.model.train()
         self.optimizer.zero_grad()
@@ -143,14 +142,13 @@ class CaptioningSolver(object):
         features = features.to(device=self.device)
         tags = tags.to(device=self.device)
         seq_lens = seq_lens.to(device=self.device)
-
         cap_vecs, batch_sizes = packed_cap_vecs
         cap_vecs = cap_vecs.to(device=self.device)
         batch_sizes = batch_sizes.to(device=self.device)
         features = self.model.batch_norm(features)
         tags_embed = self.model.word_embedding(tags)
-        features_proj = self.model.project_features(features)
-        tags_proj = self.model.project_tags(tags_embed)
+        features_proj = self.model.project_features(features, self.model.feats_proj_layer)
+        tags_proj = self.model.project_features(tags_embed, self.model.tags_proj_layer)
         hidden_states, cell_states = self.model.get_initial_lstm(features_proj, tags_proj)
 
         loss = 0
@@ -175,7 +173,7 @@ class CaptioningSolver(object):
             feats_alphas.append(feats_alpha)
             tags_alphas.append(tags_alpha)
             start_idx = end_idx
-        
+
         if self.alpha_c > 0:
             sum_loc_alphas = torch.sum(nn.utils.rnn.pad_sequence(feats_alphas), 1)
             sum_tags_alphas = torch.sum(nn.utils.rnn.pad_sequence(tags_alphas), 1)
