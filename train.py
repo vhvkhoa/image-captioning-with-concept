@@ -33,10 +33,10 @@ parser.add_argument('--log_path', type=str, default='log/', help='Path to direct
 def main():
     args = parser.parse_args()
     # load train dataset
-    train_data = CocoCaptionDataset(caption_file='./data/annotations/captions_train2017.json', 
-                                    concept_file='./data/annotations/train_concepts.json', split='train')
-    val_data = CocoCaptionDataset(caption_file='./data/annotations/captions_val2017.json',
-                                  concept_file='./data/annotations/val_concepts.json', split='val')
+    train_data = CocoCaptionDataset(caption_file='./data/train/captions_train2017.json', 
+                                    concept_file='./data/train/train_concepts.json', split='train')
+    val_data = CocoCaptionDataset(caption_file='./data/val/captions_val2017.json',
+                                  concept_file='./data/val/val_concepts.json', split='val')
     word_to_idx = train_data.get_vocab_dict()
     # load val dataset to print out scores every epoch
 
