@@ -106,7 +106,9 @@ def _process_concept_data(phase, word_to_idx, concept_file, max_keep=20):
     print('Max number of word-concepts: ', max_len)
     for file_name in concepts_dict.keys():
         concepts = concepts_dict[file_name]
-        concepts_dict[file_name] = np.pad(concepts, (0, max_len - len(concepts)), 'constant', constant_values=word_to_idx['<NULL>'])
+        for _ in range(max_len - len(concepts)):
+            concepts.append(word_to_idx['<NULL>'])
+        concepts_dict[file_name] = concepts
 
     save_json(concepts_dict, os.path.join('data', phase, os.path.basename(concept_file)))
     print('Finished building %s concept vectors' % phase)
