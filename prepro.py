@@ -96,7 +96,7 @@ def _process_concept_data(phase, word_to_idx, concept_file, max_keep=20):
         file_name, concepts = list(dict_concept.items())[0]
         concepts = sorted([[tag, int(raw_prob[:-1])] for tag, raw_prob in concepts], key=lambda x: x[1], reverse=True)
         concepts = ' '.join([concept[0] for concept in concepts[:max_keep]]).split(' ')
-        concepts = set([word_to_idx[concept] for concept in concepts])
+        concepts = list(set([word_to_idx[concept] for concept in concepts]))
         concept_lens.append(len(concepts))
         concepts_dict[file_name] = concepts
         max_len = len(concepts) if max_len < len(concepts) else max_len
