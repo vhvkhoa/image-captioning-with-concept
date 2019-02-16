@@ -56,6 +56,7 @@ class CaptionGenerator(nn.Module):
         self.dropout = nn.Dropout(p=dropout)
 
     def get_initial_lstm(self, feats_proj, tags_proj):
+        print(feats_proj.size(), tags_proj.size())
         feats_mean = torch.mean(feats_proj, 1)
         tags_mean = torch.mean(tags_proj, 1)
         h = torch.tanh(self.hidden_state_init_layer(feats_mean + tags_mean)).unsqueeze(0)
