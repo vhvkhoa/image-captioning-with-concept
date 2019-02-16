@@ -86,10 +86,9 @@ def _process_captions_data(phase, ann_file=None, max_length=None):
         return captions_data
 
 
-def _process_concept_data(phase, word_to_idx, concept_file, max_keep=20):
+def _process_concept_data(phase, word_to_idx, concept_file, max_keep=20, max_length=23):
     concepts_data = load_json(concept_file)
     concepts_dict = {}
-    concept_lens = []
     max_len = 0
 
     for dict_concept in concepts_data:
@@ -97,12 +96,9 @@ def _process_concept_data(phase, word_to_idx, concept_file, max_keep=20):
         concepts = sorted([[tag, int(raw_prob[:-1])] for tag, raw_prob in concepts], key=lambda x: x[1], reverse=True)
         concepts = ' '.join([concept[0] for concept in concepts[:max_keep]]).split(' ')
         concepts = list(set([word_to_idx[concept] for concept in concepts]))
-        concept_lens.append(len(concepts))
         concepts_dict[file_name] = concepts
         max_len = len(concepts) if max_len < len(concepts) else max_len
     
-    save_json(concept_lens, 'data/annotations/%s_concept_lens.json' % phase)
-
     print('Max number of word-concepts: ', max_len)
     for file_name in concepts_dict.keys():
         concepts = concepts_dict[file_name]
@@ -112,7 +108,6 @@ def _process_concept_data(phase, word_to_idx, concept_file, max_keep=20):
 
     save_json(concepts_dict, os.path.join('data', phase, os.path.basename(concept_file)))
     print('Finished building %s concept vectors' % phase)
-    return max_len
 
 
 def _build_vocab(captions_data, tag_names_data, threshold=1, vocab_size=0):
