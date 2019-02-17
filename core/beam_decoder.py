@@ -18,8 +18,6 @@ class BeamSearchDecoder(object):
     def decode(self, features, tags):
         with torch.no_grad():
             features = features.to(device=self.device)
-            print(type(tags))
-            print(tags.size())
             tags = tags.to(device=self.device)
             features = self.model.batch_norm(features)
             tags_embed = self.model.word_embedding(tags)
