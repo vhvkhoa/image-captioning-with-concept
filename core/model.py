@@ -17,7 +17,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class CaptionGenerator(nn.Module):
-    def __init__(self, feature_dim=[196, 512], tags_dim=[15, 512], embed_dim=512, hidden_dim=1024,
+    def __init__(self, feature_dim=[196, 512], num_tags=23, embed_dim=512, hidden_dim=1024,
                   prev2out=True, ctx2out=True, enable_selector=True, dropout=0.5, len_vocab=10000):
         super(CaptionGenerator, self).__init__()
         self.prev2out = prev2out
@@ -27,7 +27,7 @@ class CaptionGenerator(nn.Module):
         self.V = len_vocab
         self.L = feature_dim[0] #number of regions
         self.D = feature_dim[1] #size of each region feature
-        self.T = tags_dim[0] #number of tags
+        self.T = num_tags #number of tags
         self.M = embed_dim
         self.F = self.D + self.M # Fusion
         self.H = hidden_dim
