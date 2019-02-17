@@ -40,8 +40,7 @@ class CaptionGenerator(nn.Module):
         self.feats_proj_layer = nn.Linear(self.D, self.D)
         self.tags_proj_layer = nn.Linear(self.M, self.D)
         self.hidden_to_attention_layer = nn.Linear(self.H, self.D)
-        self.features_attention_layer = nn.Linear(self.D, 1)
-        self.tags_attention_layer = nn.Linear(self.M, 1)
+        self.attention_layer = nn.Linear(self.D, 1)
 
         self.features_selector_layer = nn.Linear(self.H, 1)
         self.tags_selector_layer = nn.Linear(self.H, 1)
@@ -75,7 +74,7 @@ class CaptionGenerator(nn.Module):
         embed_inputs = self.embedding_lookup(inputs)  # (N, T, M) or (N, M)
         return embed_inputs
 
-    def _attention_layer(self, features, features_proj, hidden_states, attention_layer):
+    def _attention_layer(self, features, features_proj, hidden_states):
         h_att = F.relu(features_proj + self.hidden_to_attention_layer(hidden_states[-1]).unsqueeze(1))    # (N, L, D)
         loc, dim = features_proj.size()[1:]
         out_att = self.attention_layer(h_att.view(-1, dim)).view(-1, loc)   # (N, L)
@@ -106,8 +105,8 @@ class CaptionGenerator(nn.Module):
     def forward(self, features, features_proj, tags_embed, tags_proj, past_captions, hidden_states, cell_states):
         emb_captions = self.word_embedding(inputs=past_captions)
 
-        feats_context, feats_alpha = self._attention_layer(features, features_proj, hidden_states, self.features_attention_layer)
-        tags_context, tags_alpha = self._attention_layer(tags_embed, tags_proj, hidden_states, self.tags_attention_layer)
+        feats_context, feats_alpha = self._attention_layer(features, features_proj, hidden_states)
+        tags_context, tags_alpha = self._attention_layer(tags_embed, tags_proj, hidden_states)
 
         if self.enable_selector:
             feats_context, feats_beta = self._selector(feats_context, hidden_states, self.features_selector_layer)
