@@ -77,8 +77,8 @@ class CaptionGenerator(nn.Module):
 
     def _attention_layer(self, features, features_proj, hidden_states, attention_layer):
         h_att = F.relu(features_proj + self.hidden_to_attention_layer(hidden_states[-1]).unsqueeze(1))    # (N, L, D)
-        loc, dim = h_att.size()[1:]
-        out_att = attention_layer(h_att.view(-1, dim)).view(-1, loc)   # (N, L)
+        loc, dim = features_proj.size()[1:]
+        out_att = self.attention_layer(h_att.view(-1, dim)).view(-1, loc)   # (N, L)
         alpha = F.softmax(out_att, dim=-1)
         context = torch.sum(features * alpha.unsqueeze(2), 1)   #(N, D)
         return context, alpha
@@ -114,8 +114,6 @@ class CaptionGenerator(nn.Module):
             tags_context, tags_beta = self._selector(tags_context, hidden_states, self.tags_selector_layer)
 
         next_input = torch.cat((emb_captions, feats_context, tags_context), 1).unsqueeze(0)
-        print(next_input.size())
-        print(self.lstm_cell)
 
         output, (next_hidden_states, next_cell_states) = self.lstm_cell(next_input, (hidden_states, cell_states))
 

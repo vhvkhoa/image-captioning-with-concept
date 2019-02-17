@@ -150,7 +150,6 @@ class CaptioningSolver(object):
         features_proj = self.model.project_features(features, self.model.feats_proj_layer)
         tags_proj = self.model.project_features(tags_embed, self.model.tags_proj_layer)
         hidden_states, cell_states = self.model.get_initial_lstm(features_proj, tags_proj)
-        print(tags_embed.size(), tags_proj.size())
 
         loss = 0
         acc = 0.
