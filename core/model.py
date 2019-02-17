@@ -39,8 +39,7 @@ class CaptionGenerator(nn.Module):
         self.embedding_lookup = nn.Embedding(self.V, self.M)
         self.feats_proj_layer = nn.Linear(self.D, self.D)
         self.tags_proj_layer = nn.Linear(self.M, self.D)
-        self.hidden_to_features_attention_layer = nn.Linear(self.H, self.D)
-        self.hidden_to_tags_attention_layer = nn.Linear(self.H, self.M) 
+        self.hidden_to_attention_layer = nn.Linear(self.H, self.D)
         self.features_attention_layer = nn.Linear(self.D, 1)
         self.tags_attention_layer = nn.Linear(self.M, 1)
 
@@ -76,8 +75,8 @@ class CaptionGenerator(nn.Module):
         embed_inputs = self.embedding_lookup(inputs)  # (N, T, M) or (N, M)
         return embed_inputs
 
-    def _attention_layer(self, features, features_proj, hidden_states, hidden_to_attention_layer, attention_layer):
-        h_att = F.relu(features_proj + hidden_to_attention_layer(hidden_states[-1]).unsqueeze(1))    # (N, L, D)
+    def _attention_layer(self, features, features_proj, hidden_states, attention_layer):
+        h_att = F.relu(features_proj + self.hidden_to_attention_layer(hidden_states[-1]).unsqueeze(1))    # (N, L, D)
         loc, dim = h_att.size()[1:]
         out_att = attention_layer(h_att.view(-1, dim)).view(-1, loc)   # (N, L)
         alpha = F.softmax(out_att, dim=-1)
@@ -107,10 +106,8 @@ class CaptionGenerator(nn.Module):
     def forward(self, features, features_proj, tags_embed, tags_proj, past_captions, hidden_states, cell_states):
         emb_captions = self.word_embedding(inputs=past_captions)
 
-        feats_context, feats_alpha = self._attention_layer(features, features_proj, hidden_states, 
-                                            self.hidden_to_features_attention_layer, self.features_attention_layer)
-        tags_context, tags_alpha = self._attention_layer(tags_embed, tags_proj, hidden_states, 
-                                            self.hidden_to_tags_attention_layer, self.tags_attention_layer)
+        feats_context, feats_alpha = self._attention_layer(features, features_proj, hidden_states, self.features_attention_layer)
+        tags_context, tags_alpha = self._attention_layer(tags_embed, tags_proj, hidden_states, self.tags_attention_layer)
 
         if self.enable_selector:
             feats_context, feats_beta = self._selector(feats_context, hidden_states, self.features_selector_layer)
