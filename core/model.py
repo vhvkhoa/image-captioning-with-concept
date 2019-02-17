@@ -77,8 +77,6 @@ class CaptionGenerator(nn.Module):
         return embed_inputs
 
     def _attention_layer(self, features, features_proj, hidden_states, hidden_to_attention_layer, attention_layer):
-        print(hidden_to_attention_layer)
-        print(features_proj.size())
         h_att = F.relu(features_proj + hidden_to_attention_layer(hidden_states[-1]).unsqueeze(1))    # (N, L, D)
         loc, dim = h_att.size()[1:]
         out_att = attention_layer(h_att.view(-1, dim)).view(-1, loc)   # (N, L)
