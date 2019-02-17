@@ -33,7 +33,7 @@ class CaptionGenerator(nn.Module):
         self.H = hidden_dim
 
         # Trainable parameters :
-        self.lstm_cell = nn.LSTM(self.D + self.M, self.H, dropout=0.5)
+        self.lstm_cell = nn.LSTM(self.D + 2 * self.M, self.H, dropout=0.5)
         self.hidden_state_init_layer = nn.Linear(self.D, self.H)
         self.cell_state_init_layer = nn.Linear(self.D, self.H)
         self.embedding_lookup = nn.Embedding(self.V, self.M)
@@ -77,8 +77,8 @@ class CaptionGenerator(nn.Module):
         return embed_inputs
 
     def _attention_layer(self, features, features_proj, hidden_states, hidden_to_attention_layer, attention_layer):
-        print(hidden_states.size())
-        h_att = F.relu(features_proj + hidden_to_attention_layer(hidden_states).unsqueeze(1))    # (N, L, D)
+        print(hidden_to_attention_layer)
+        h_att = F.relu(features_proj + hidden_to_attention_layer(hidden_states[-1]).unsqueeze(1))    # (N, L, D)
         loc, dim = h_att.size()[1:]
         out_att = attention_layer(h_att.view(-1, dim)).view(-1, loc)   # (N, L)
         alpha = F.softmax(out_att, dim=-1)
