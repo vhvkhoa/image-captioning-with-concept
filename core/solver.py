@@ -93,7 +93,7 @@ class CaptioningSolver(object):
         if self.checkpoint != None:
             self._load(self.checkpoint)
         else:
-            self.start_iter = 1
+            self.start_iter = 0
             self.init_best_scores = {'best_'+score_name: 0. for score_name in self.capture_scores}
 
         self.writer = SummaryWriter(self.log_path, purge_step=self.start_iter*len(self.train_loader))
@@ -233,7 +233,7 @@ class CaptioningSolver(object):
             save_json(captions, cap_path)
             print('-'*25)
             caption_scores = evaluate(get_scores=True)
-            for metric, score in caption_scores:
+            for metric, score in caption_scores.items():
                 print(metric, ': ', score)
             print('-'*25)
             write_scores(caption_scores, './', engine.state.epoch, engine.state.iteration)
