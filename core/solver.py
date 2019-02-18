@@ -119,7 +119,7 @@ class CaptioningSolver(object):
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         self.start_iter = checkpoint['iteration'] + 1
-        self.init_best_scores = {score_name: self.checkpoint[score_name]
+        self.init_best_scores = {score_name: checkpoint[score_name]
                                 for score_name in self.capture_scores}
 
         print('-'*25 + '\nLoaded checkpoint: ' + model_path)
