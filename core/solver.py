@@ -125,7 +125,7 @@ class CaptioningSolver(object):
         engine.state.epoch = int(self.start_iter // len(self.train_loader))
         engine.state.best_scores = self.init_best_scores
         print('-'*25)
-        print('Start training at Epoch %d - Iteration %d' % (engine.state.iteration, engine.state.epoch))
+        print('Start training at Epoch %d - Iteration %d' % (engine.state.epoch, engine.state.iteration))
         print('Number of iterations per epoch: %d' % len(self.train_loader))
         print('-'*25)
 
