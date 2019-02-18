@@ -172,7 +172,7 @@ class CaptioningSolver(object):
             if score < caption_scores[metric]:
                 engine.state.best_scores[metric] = caption_scores[metric]
 
-        self._save(epoch, iteration, engine.state.output[0])
+        self._save(epoch, iteration, engine.state.output[0], engine.state.best_scores)
 
     def _train(self, engine, batch):
         self.model.train()
