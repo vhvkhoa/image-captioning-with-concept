@@ -81,6 +81,7 @@ class CaptioningSolver(object):
 
         self.train_engine.add_event_handler(Events.ITERATION_COMPLETED, self.training_end_iter_handler)
         self.train_engine.add_event_handler(Events.STARTED, self.training_start_handler)
+        self.train_engine.add_event_handler(Events.EPOCH_COMPLETED, self.training_end_epoch_handler)
         self.test_engine.add_event_handler(Events.EPOCH_STARTED, self.testing_start_epoch_handler)
         self.test_engine.add_event_handler(Events.EPOCH_COMPLETED, self.testing_end_epoch_handler, True)    
 
@@ -95,14 +96,19 @@ class CaptioningSolver(object):
 
         self.writer = SummaryWriter(self.log_path, purge_step=self.start_iter*len(self.train_loader))
 
-    def _save(self, epoch, iteration, loss):
+    def _save(self, epoch, iteration, loss, end_epoch=False):
+        if end_epoch:
+            model_name =  'model_epoch_' + str(epoch) + '.pth'
+        else:
+            model_name = 'model_iter_' + str(iteration) + '.pth'
+
         torch.save({
                     'epoch': epoch,
                     'iteration': iteration,
                     'model_state_dict': self.model.state_dict(),
                     'optimizer_state_dict': self.optimizer.state_dict(),
                     'loss': loss
-                    }, os.path.join(self.checkpoint_dir, str(iteration) + '.pth'))
+                    }, os.path.join(self.checkpoint_dir, model_name))
 
     def _load(self, model_path):
         checkpoint = torch.load(model_path)
@@ -132,7 +138,7 @@ class CaptioningSolver(object):
             self._save(epoch, iteration, loss)
 
     def training_end_epoch_handler(self, engine):
-        self._save(engine.state.epoch, engine.state.iteration, engine.state.output[0])
+        self._save(engine.state.epoch, engine.state.iteration, engine.state.output[0], end_epoch=True)
 
     def _train(self, engine, batch):
         self.model.train()
