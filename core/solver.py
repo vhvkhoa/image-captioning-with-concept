@@ -98,7 +98,7 @@ class CaptioningSolver(object):
         self.writer = SummaryWriter(self.log_path, purge_step=self.start_iter*len(self.train_loader))
 
     def _save(self, epoch, iteration, loss, best_scores, prefix='epoch'):
-        model_name =  'model_' + prefix + str(epoch) + '_' + str(iteration) + '.pth'
+        model_name =  'model_' + prefix + '.pth'
 
         model_dict = {
                     'epoch': epoch,
