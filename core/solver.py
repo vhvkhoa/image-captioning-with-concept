@@ -236,7 +236,6 @@ class CaptioningSolver(object):
             for metric, score in caption_scores.items():
                 print(metric, ': ', score)
             print('-'*25)
-            write_scores(caption_scores, './', engine.state.epoch, engine.state.iteration)
             engine.state.scores = caption_scores
         else:
             save_json(captions, './data/%s/%s.candidate.captions.json' % ('test', 'test'))
