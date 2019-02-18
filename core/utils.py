@@ -67,7 +67,7 @@ def evaluate(candidate_path='./data/val/val.candidate.captions.json', reference_
     cocoEval.evaluate()
     final_scores = {}
     for metric, score in cocoEval.eval.items():
-        final_scores[metric] = score
+        final_scores[metric.lower()] = score
         logging.info('%s:\t%.3f'%(metric, score))
 
     if get_scores:

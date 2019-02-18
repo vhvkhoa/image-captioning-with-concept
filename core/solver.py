@@ -61,6 +61,7 @@ class CaptioningSolver(object):
         self.checkpoint_dir = kwargs.pop('checkpoint_dir', './model/')
         self.checkpoint = kwargs.pop('checkpoint', None)
         self.device = kwargs.pop('device', 'cuda:0')
+        self.capture_scores = kwargs.pop('capture_scores', ['bleu_1', 'bleu_4', 'cider'])
 
         self.train_loader = DataLoader(train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=4, collate_fn=pack_collate_fn)
         self.val_loader = DataLoader(val_dataset, batch_size=self.batch_size, num_workers=4)
@@ -93,32 +94,40 @@ class CaptioningSolver(object):
             self._load(self.checkpoint)
         else:
             self.start_iter = 1
+            self.init_best_scores = {'best_'+score_name: 0. for score_name in self.capture_scores}
 
         self.writer = SummaryWriter(self.log_path, purge_step=self.start_iter*len(self.train_loader))
 
-    def _save(self, epoch, iteration, loss, end_epoch=False):
-        if end_epoch:
-            model_name =  'model_epoch_' + str(epoch) + '.pth'
-        else:
-            model_name = 'model_iter_' + str(iteration) + '.pth'
+    def _save(self, epoch, iteration, loss, best_scores, prefix='epoch'):
+        model_name =  'model_' + prefix + str(epoch) + '_' + str(iteration) + '.pth'
 
-        torch.save({
+        model_dict = {
                     'epoch': epoch,
                     'iteration': iteration,
                     'model_state_dict': self.model.state_dict(),
                     'optimizer_state_dict': self.optimizer.state_dict(),
-                    'loss': loss
-                    }, os.path.join(self.checkpoint_dir, model_name))
+                    'loss': loss}
+        for metric, score in best_scores.items():
+            model_dict['best_'+metric] = score
+        
+        torch.save(model_dict, os.path.join(self.checkpoint_dir, model_name))
 
     def _load(self, model_path):
         checkpoint = torch.load(model_path)
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         self.start_iter = checkpoint['iteration'] + 1
+        self.init_best_scores = {score_name: self.checkpoint['best_'+score_name]
+                                for score_name in self.capture_scores}
 
     def training_start_handler(self, engine):
         engine.state.iteration = self.start_iter
         engine.state.epoch = int(self.start_iter // len(self.train_loader))
+        engine.state.best_scores = self.init_best_scores
+        print('-'*25)
+        print('Start training at Epoch %d - Iteration %d' % (engine.state.iteration, engine.state.epoch))
+        print('Number of iterations per epoch: %d' % len(self.train_loader))
+        print('-'*25)
 
     def training_end_iter_handler(self, engine):
         iteration = engine.state.iteration
@@ -133,12 +142,32 @@ class CaptioningSolver(object):
             caption_scores = self.test(self.val_loader, is_validation=True)
             for metric, score in caption_scores.items():
                 self.writer.add_scalar(metric, score, iteration)
+            for metric, score in engine.state.best_scores.items():
+                if score < caption_scores[metric]:
+                    engine.state.best_scores[metric] = caption_scores[metric]
 
         if iteration % self.snapshot_steps == 0:
             self._save(epoch, iteration, loss)
 
     def training_end_epoch_handler(self, engine):
-        self._save(engine.state.epoch, engine.state.iteration, engine.state.output[0], end_epoch=True)
+        iteration = engine.state.iteration
+        epoch = engine.state.epoch
+        loss, acc= engine.state.output
+
+        print('-'*25)
+        print('Complete Epoch: {}, Loss:{}, Accuracy:{}'.format(epoch, loss, acc))
+        print('-'*25)
+        self.writer.add_scalar('Loss', loss, iteration)
+        self.writer.add_scalar('Accuracy', acc, iteration)
+
+        caption_scores = self.test(self.val_loader, is_validation=True)
+        for metric, score in caption_scores.items():
+            self.writer.add_scalar(metric, score, iteration)
+        for metric, score in engine.state.best_scores.items():
+            if score < caption_scores[metric]:
+                engine.state.best_scores[metric] = caption_scores[metric]
+
+        self._save(epoch, iteration, engine.state.output[0], end_epoch=True)
 
     def _train(self, engine, batch):
         self.model.train()
