@@ -93,7 +93,7 @@ class CaptioningSolver(object):
             self._load(self.checkpoint)
         else:
             self.start_iter = 0
-            self.init_best_scores = {'best_'+score_name: 0. for score_name in self.capture_scores}
+            self.init_best_scores = {score_name: 0. for score_name in self.capture_scores}
 
         self.writer = SummaryWriter(self.log_path, purge_step=self.start_iter*len(self.train_loader))
 
@@ -107,7 +107,7 @@ class CaptioningSolver(object):
                     'optimizer_state_dict': self.optimizer.state_dict(),
                     'loss': loss}
         for metric, score in best_scores.items():
-            model_dict['best_'+metric] = score
+            model_dict[metric] = score
         
         print('-'*25)
         print('Saved ' + model_name)
