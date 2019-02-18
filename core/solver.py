@@ -122,6 +122,11 @@ class CaptioningSolver(object):
         self.init_best_scores = {score_name: self.checkpoint[score_name]
                                 for score_name in self.capture_scores}
 
+        print('-'*25 + '\nLoaded checkpoint: ' + model_path)
+        print('Checkpoint info:\n\tEpoch: %d\n\tIteration: %d' % (checkpoint['epoch'], checkpoint['iteration']))
+        print('\t', self.init_best_scores)
+
+
     def training_start_handler(self, engine):
         engine.state.iteration = self.start_iter
         engine.state.epoch = int(self.start_iter // len(self.train_loader))
