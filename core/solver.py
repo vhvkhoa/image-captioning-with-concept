@@ -145,9 +145,7 @@ class CaptioningSolver(object):
             for metric, score in engine.state.best_scores.items():
                 if score < caption_scores[metric]:
                     engine.state.best_scores[metric] = caption_scores[metric]
-
-        if iteration % self.snapshot_steps == 0:
-            self._save(epoch, iteration, loss)
+                    self._save(epoch, iteration, loss, engine.state.best_scores, prefix='best_'+metric)
 
     def training_end_epoch_handler(self, engine):
         iteration = engine.state.iteration
