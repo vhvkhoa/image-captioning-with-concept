@@ -110,6 +110,9 @@ class CaptioningSolver(object):
         for metric, score in best_scores.items():
             model_dict['best_'+metric] = score
         
+        print('-'*25)
+        print('Saved ' + model_name)
+        print('-'*25)
         torch.save(model_dict, os.path.join(self.checkpoint_dir, model_name))
 
     def _load(self, model_path):
@@ -228,7 +231,11 @@ class CaptioningSolver(object):
         if is_val: 
             cap_path = './data/%s/%s.candidate.captions.json' % ('val', 'val')
             save_json(captions, cap_path)
+            print('-'*25)
             caption_scores = evaluate(get_scores=True)
+            for metric, score in caption_scores:
+                print(metric, ': ', score)
+            print('-'*25)
             write_scores(caption_scores, './', engine.state.epoch, engine.state.iteration)
             engine.state.scores = caption_scores
         else:

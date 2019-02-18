@@ -3,7 +3,6 @@ import json
 import time
 import os
 import sys
-import logging
 sys.path.append('../coco-caption')
 from pycocoevalcap.eval import COCOEvalCap
 from pycocotools.coco import COCO
@@ -68,7 +67,6 @@ def evaluate(candidate_path='./data/val/val.candidate.captions.json', reference_
     final_scores = {}
     for metric, score in cocoEval.eval.items():
         final_scores[metric.lower()] = score
-        logging.info('%s:\t%.3f'%(metric, score))
 
     if get_scores:
         return final_scores
