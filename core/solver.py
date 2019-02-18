@@ -55,7 +55,6 @@ class CaptioningSolver(object):
         self.learning_rate = kwargs.pop('learning_rate', 0.01)
         self.metric = kwargs.pop('metric', 'CIDEr')
         self.alpha_c = kwargs.pop('alpha_c', 1.0)
-        self.snapshot_steps = kwargs.pop('snapshot_steps', 100)
         self.eval_every = kwargs.pop('eval_every', 200)
         self.log_path = kwargs.pop('log_path', './log/')
         self.checkpoint_dir = kwargs.pop('checkpoint_dir', './model/')
@@ -120,7 +119,7 @@ class CaptioningSolver(object):
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         self.start_iter = checkpoint['iteration'] + 1
-        self.init_best_scores = {score_name: self.checkpoint['best_'+score_name]
+        self.init_best_scores = {score_name: self.checkpoint[score_name]
                                 for score_name in self.capture_scores}
 
     def training_start_handler(self, engine):
