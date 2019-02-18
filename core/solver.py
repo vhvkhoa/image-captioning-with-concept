@@ -118,13 +118,13 @@ class CaptioningSolver(object):
         checkpoint = torch.load(model_path)
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        self.start_iter = checkpoint['iteration'] + 1
+        self.start_iter = checkpoint['iteration']
         self.init_best_scores = {score_name: checkpoint[score_name]
                                 for score_name in self.capture_scores}
 
         print('-'*25 + '\nLoaded checkpoint: ' + model_path)
         print('Checkpoint info:\n\tEpoch: %d\n\tIteration: %d' % (checkpoint['epoch'], checkpoint['iteration']))
-        print('\t', self.init_best_scores)
+        print('\t', self.init_best_scores, sep='')
 
 
     def training_start_handler(self, engine):
@@ -132,7 +132,7 @@ class CaptioningSolver(object):
         engine.state.epoch = int(self.start_iter // len(self.train_loader))
         engine.state.best_scores = self.init_best_scores
         print('-'*25)
-        print('Start training at Epoch %d - Iteration %d' % (engine.state.epoch, engine.state.iteration))
+        print('Start training at Epoch %d - Iteration %d' % (engine.state.epoch+1, engine.state.iteration+1))
         print('Number of iterations per epoch: %d' % len(self.train_loader))
         print('-'*25)
 
