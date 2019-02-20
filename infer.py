@@ -10,29 +10,29 @@ from core.solver import CaptioningSolver
 from core.model import CaptionGenerator
 from core.dataset import CocoCaptionDataset
 
-parser = argparse.ArgumentParser(description='Train model.')
+parser = argparse.ArgumentParser()
 
 """Model's parameters"""
-parser.add_argument('test_checkpoint', type=str, 'Path to a checkpoint used to infer.') 
-parser.add_argument('word_to_idx_dict', type=str, 'Path to pickle file contained dictionary of words and their corresponding indices.')
+parser.add_argument('test_checkpoint', type=str, help='Path to a checkpoint used to infer.') 
+parser.add_argument('word_to_idx_dict', type=str, help='Path to pickle file contained dictionary of words and their corresponding indices.')
 
-parser.add_argument('--image_feature_size', type=int, default=196, 'Multiplication of width and height of image feature\'s dimension, e.g 14x14=196 in the original paper.')
-parser.add_argument('--image_feature_depth', type=int, default=1024, 'Depth dimension of image feature, e.g 512 if you extract features at conv-5 of VGG-16 model.')
-parser.add_argument('--lstm_hidden_size', type=int, default=1536, 'Hidden layer size for LSTM cell.')
-parser.add_argument('--time_steps', type=int, default=31, 'Number of time steps to be iterating through.')
-parser.add_argument('--embed_dim', type=int, default=512, 'Embedding space size for embedding tokens.')
-parser.add_argument('--beam_size', type=int, default=3, 'Beam size for inference phase.')
-parser.add_argument('--dropout', type=float, default=0.5, 'Dropout portion.')
-parser.add_argument('--prev2out', action='store_true', default=True, 'Link previous hidden state to output.')
-parser.add_argument('--ctx2out', action='store_true', default=True, 'Link context features to output.')
-parser.add_argument('--enable_selector', action='store_true', default=True, 'Enable selector to determine how much important the image context is at every time step.')
+parser.add_argument('--image_feature_size', type=int, default=196, help='Multiplication of width and height of image feature\'s dimension, e.g 14x14=196 in the original paper.')
+parser.add_argument('--image_feature_depth', type=int, default=1024, help='Depth dimension of image feature, e.g 512 if you extract features at conv-5 of VGG-16 model.')
+parser.add_argument('--lstm_hidden_size', type=int, default=1536, help='Hidden layer size for LSTM cell.')
+parser.add_argument('--time_steps', type=int, default=31, help='Number of time steps to be iterating through.')
+parser.add_argument('--embed_dim', type=int, default=512, help='Embedding space size for embedding tokens.')
+parser.add_argument('--beam_size', type=int, default=3, help='Beam size for inference phase.')
+parser.add_argument('--dropout', type=float, default=0.5, help='Dropout portion.')
+parser.add_argument('--prev2out', action='store_true', default=True, help='Link previous hidden state to output.')
+parser.add_argument('--ctx2out', action='store_true', default=True, help='Link context features to output.')
+parser.add_argument('--enable_selector', action='store_true', default=True, help='Enable selector to determine how much important the image context is at every time step.')
 
 """Other parameters"""
 parser.add_argument('--device', type=str, default='cuda:0', help='Device to be used for training model.')
-parser.add_argument('--att_vis', action='store_true', default=False, 'Attention visualization, will show attention masks of every word.') 
-parser.add_argument('--image_id_file', type=str, default='./data/val/captions_val2017.json')
-parser.add_argument('--concept_file', type=str, default='./data/val/val_concepts.json')
-parser.add_argument('--batch_size', type=int, default=128, 'Number of examples per mini-batch.')
+parser.add_argument('--att_vis', action='store_true', default=False, help='Attention visualization, will show attention masks of every word.') 
+parser.add_argument('--image_info_file', type=str, default='./data/val/captions_val2017.json', help='Path to json file contained image ids and names')
+parser.add_argument('--concept_file', type=str, default='./data/val/val_concepts.json', help='Path to json file contained concepts extracted by some detection models.')
+parser.add_argument('--batch_size', type=int, default=128, help='Number of examples per mini-batch.')
 
 def main():
     args = parser.parse_args()
