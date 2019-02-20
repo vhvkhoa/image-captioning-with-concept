@@ -27,7 +27,7 @@ def pack_collate_fn(batch):
     return len_sorted_features, len_sorted_tags, packed_cap_vecs, len_sorted_captions, seq_lens
 
 class CaptioningSolver(object):
-    def __init__(self, model, word_to_idx, train_dataset, val_dataset, **kwargs):
+    def __init__(self, model, word_to_idx, train_dataset=None, val_dataset=None, **kwargs):
         """
         Required Arguments:
             - model: Show Attend and Tell caption generating model
@@ -62,40 +62,42 @@ class CaptioningSolver(object):
         self.device = kwargs.pop('device', 'cuda:0')
         self.capture_scores = kwargs.pop('capture_scores', ['bleu_1', 'bleu_4', 'cider'])
 
-        self.train_loader = DataLoader(train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=4, collate_fn=pack_collate_fn)
-        self.val_loader = DataLoader(val_dataset, batch_size=self.batch_size, num_workers=4)
-
         self.beam_decoder = BeamSearchDecoder(self.model, self.device, self.beam_size, len(self.idx_to_word), self._start, self._end, self.n_time_steps)
-
-        # set an optimizer by update rule
-        if self.update_rule == 'adam':
-            self.optimizer = optim.Adam(params=self.model.parameters(), lr=self.learning_rate)
-        elif self.update_rule == 'rmsprop':
-            self.optimizer = optim.RMSprop(params=self.model.parameters(), lr=self.learning_rate)
-
-        self.word_criterion = nn.CrossEntropyLoss(ignore_index=self._null, reduction='sum')
-        self.alpha_criterion = nn.MSELoss(reduction='sum')
 
         self.train_engine = Engine(self._train)
         self.test_engine = Engine(self._test)
 
-        self.train_engine.add_event_handler(Events.ITERATION_COMPLETED, self.training_end_iter_handler)
-        self.train_engine.add_event_handler(Events.STARTED, self.training_start_handler)
-        self.train_engine.add_event_handler(Events.EPOCH_COMPLETED, self.training_end_epoch_handler)
-        self.test_engine.add_event_handler(Events.EPOCH_STARTED, self.testing_start_epoch_handler)
-        self.test_engine.add_event_handler(Events.EPOCH_COMPLETED, self.testing_end_epoch_handler, True)    
-
-        if not os.path.exists(self.checkpoint_dir):
-            os.makedirs(self.checkpoint_dir)
-        if not os.path.exists(self.log_path):
-            os.makedirs(self.log_path)
         if self.checkpoint != None:
             self._load(self.checkpoint)
         else:
             self.start_iter = 0
             self.init_best_scores = {score_name: 0. for score_name in self.capture_scores}
 
-        self.writer = SummaryWriter(self.log_path, purge_step=self.start_iter)
+        if train_dataset != None and val_dataset != None:
+            self.train_loader = DataLoader(train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=4, collate_fn=pack_collate_fn)
+            self.val_loader = DataLoader(val_dataset, batch_size=self.batch_size, num_workers=4)
+
+            # set an optimizer by update rule
+            if self.update_rule == 'adam':
+                self.optimizer = optim.Adam(params=self.model.parameters(), lr=self.learning_rate)
+            elif self.update_rule == 'rmsprop':
+                self.optimizer = optim.RMSprop(params=self.model.parameters(), lr=self.learning_rate)
+
+            self.word_criterion = nn.CrossEntropyLoss(ignore_index=self._null, reduction='sum')
+            self.alpha_criterion = nn.MSELoss(reduction='sum')
+
+            self.train_engine.add_event_handler(Events.ITERATION_COMPLETED, self.training_end_iter_handler)
+            self.train_engine.add_event_handler(Events.STARTED, self.training_start_handler)
+            self.train_engine.add_event_handler(Events.EPOCH_COMPLETED, self.training_end_epoch_handler)
+            self.test_engine.add_event_handler(Events.EPOCH_STARTED, self.testing_start_epoch_handler)
+            self.test_engine.add_event_handler(Events.EPOCH_COMPLETED, self.testing_end_epoch_handler, True)    
+
+            if not os.path.exists(self.checkpoint_dir):
+                os.makedirs(self.checkpoint_dir)
+            if not os.path.exists(self.log_path):
+                os.makedirs(self.log_path)
+
+            self.writer = SummaryWriter(self.log_path, purge_step=self.start_iter)
 
     def _save(self, epoch, iteration, loss, best_scores, prefix='epoch'):
         model_name =  'model_' + prefix + '.pth'
@@ -165,7 +167,7 @@ class CaptioningSolver(object):
         self.writer.add_scalar('Loss', loss, iteration)
         self.writer.add_scalar('Accuracy', acc, iteration)
 
-        caption_scores = self.test(self.val_loader, is_validation=True)
+        caption_scores = self.test(is_validation=True)
         for metric, score in caption_scores.items():
             self.writer.add_scalar(metric, score, iteration)
         for metric, score in engine.state.best_scores.items():
@@ -242,7 +244,7 @@ class CaptioningSolver(object):
             print('-'*25)
             engine.state.scores = caption_scores
         else:
-            save_json(captions, './data/%s/%s.candidate.captions.json' % ('test', 'test'))
+            save_json(captions, './data/test/test.candidate.captions.json')
 
     def _test(self, engine, batch):
         self.model.eval()
@@ -260,5 +262,5 @@ class CaptioningSolver(object):
             test_state = self.test_engine.run(self.val_loader)
             return test_state.scores
         else:
-            self.test_loader = DataLoader(test_dataset, batch_size=self.batch_size, num_workers=4, collate_fn=pack_collate_fn)
+            self.test_loader = DataLoader(test_dataset, batch_size=self.batch_size, num_workers=4)
             self.test_engine.run(self.test_loader)

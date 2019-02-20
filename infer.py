@@ -5,46 +5,57 @@ from core.model import CaptionGenerator
 from core.utils import load_coco_data
 from core.utils import evaluate
 
-FLAGS = flags.FLAGS
+import argparse
+from core.solver import CaptioningSolver
+from core.model import CaptionGenerator
+from core.dataset import CocoCaptionDataset
+
+parser = argparse.ArgumentParser(description='Train model.')
 
 """Model's parameters"""
-flags.DEFINE_integer('image_feature_size', 196, 'Multiplication of width and height of image feature\'s dimension, e.g 14x14=196 in the original paper.')
-flags.DEFINE_integer('image_feature_depth', 1024, 'Depth dimension of image feature, e.g 512 if you extract features at conv-5 of VGG-16 model.')
-flags.DEFINE_integer('lstm_hidden_size', 1536, 'Hidden layer size for LSTM cell.')
-flags.DEFINE_integer('time_steps', 31, 'Number of time steps to be iterating through.')
-flags.DEFINE_integer('embed_dim', 512, 'Embedding space size for embedding tokens.')
-flags.DEFINE_integer('beam_size', 3, 'Beam size for inference phase.')
-flags.DEFINE_float('dropout', 0.5, 'Dropout portion.')
-flags.DEFINE_boolean('prev2out', True, 'Link previous hidden state to output.')
-flags.DEFINE_boolean('ctx2out', True, 'Link context features to output.')
-flags.DEFINE_boolean('enable_selector', True, 'Enable selector to determine how much important the image context is at every time step.')
+parser.add_argument('test_checkpoint', type=str, 'Path to a checkpoint used to infer.') 
+parser.add_argument('word_to_idx_dict', type=str, 'Path to pickle file contained dictionary of words and their corresponding indices.')
+
+parser.add_argument('--image_feature_size', type=int, default=196, 'Multiplication of width and height of image feature\'s dimension, e.g 14x14=196 in the original paper.')
+parser.add_argument('--image_feature_depth', type=int, default=1024, 'Depth dimension of image feature, e.g 512 if you extract features at conv-5 of VGG-16 model.')
+parser.add_argument('--lstm_hidden_size', type=int, default=1536, 'Hidden layer size for LSTM cell.')
+parser.add_argument('--time_steps', type=int, default=31, 'Number of time steps to be iterating through.')
+parser.add_argument('--embed_dim', type=int, default=512, 'Embedding space size for embedding tokens.')
+parser.add_argument('--beam_size', type=int, default=3, 'Beam size for inference phase.')
+parser.add_argument('--dropout', type=float, default=0.5, 'Dropout portion.')
+parser.add_argument('--prev2out', action='store_true', default=True, 'Link previous hidden state to output.')
+parser.add_argument('--ctx2out', action='store_true', default=True, 'Link context features to output.')
+parser.add_argument('--enable_selector', action='store_true', default=True, 'Enable selector to determine how much important the image context is at every time step.')
 
 """Other parameters"""
-flags.DEFINE_boolean('att_vis', False, 'Attention visualization, will show attention masks of every word.') 
-flags.DEFINE_string('test_checkpoint', '', 'Path to a checkpoint used to infer.') 
-flags.DEFINE_string('word_to_idx_dict', 'word_to_idx.pkl', 'Path to pickle file contained dictionary of words and their corresponding indices.')
-flags.DEFINE_string('split', 'val', 'Split contained extracted features of images you want to caption.\n' + 
-                                    'Split should be inside ./data/ repository, if not, an error would be raised.\n' +
-                                    'Features can be extracted by running prepro.py file.\n'+
-                                    'Run python prepro.py to see instructions.')
-flags.DEFINE_integer('batch_size', 128, 'Number of examples per mini-batch.')
+parser.add_argument('--device', type=str, default='cuda:0', help='Device to be used for training model.')
+parser.add_argument('--att_vis', action='store_true', default=False, 'Attention visualization, will show attention masks of every word.') 
+parser.add_argument('--image_id_file', type=str, default='./data/val/captions_val2017.json')
+parser.add_argument('--concept_file', type=str, default='./data/val/val_concepts.json')
+parser.add_argument('--batch_size', type=int, default=128, 'Number of examples per mini-batch.')
 
 def main():
+    args = parser.parse_args()
     # load dataset and vocab
-    data = load_coco_data(data_path='./data', split=FLAGS.split)
-    with open('./data/train/word_to_idx.pkl', 'rb') as f:
-        word_to_idx = pickle.load(f)
+    test_data = CocoCaptionDataset(args.image_id_file,
+                                  concept_file=args.concept_file, split='test')
+    word_to_idx = train_data.get_vocab_dict()
+    # load val dataset to print out scores every epoch
 
-    model = CaptionGenerator(word_to_idx, dim_feature=[FLAGS.image_feature_size, FLAGS.image_feature_depth], dim_embed=FLAGS.embed_dim,
-                                    dim_hidden=FLAGS.lstm_hidden_size, n_time_step=FLAGS.time_steps, prev2out=FLAGS.prev2out,
-                                    ctx2out=FLAGS.ctx2out, alpha_c=1.0, enable_selector=FLAGS.enable_selector, dropout=FLAGS.dropout)
+    model = CaptionGenerator(feature_dim=[args.image_feature_size, args.image_feature_depth], 
+                                    num_tags=23, embed_dim=args.embed_dim,
+                                    hidden_dim=args.lstm_hidden_size, prev2out=args.prev2out, len_vocab=len(word_to_idx),
+                                    ctx2out=args.ctx2out, enable_selector=args.enable_selector, dropout=args.dropout).to(device=args.device)
 
-    solver = CaptioningSolver(model, batch_size=FLAGS.batch_size, 
-                                    test_checkpoint=FLAGS.test_checkpoint)
+    solver = CaptioningSolver(model, word_to_idx, n_time_steps=args.time_steps, batch_size=args.batch_size,
+                                    beam_size=args.beam_size, optimizer=args.optimizer, 
+                                    learning_rate=args.learning_rate, metric=args.metric,
+                                    eval_every=args.eval_steps,
+                                    checkpoint=args.checkpoint, checkpoint_dir=args.checkpoint_dir, 
+                                    log_path=args.log_path, device=args.device)
 
-    solver.test(data, beam_size=3, attention_visualization=FLAGS.att_vis)
+    solver.test(data, test_dataset=test_data)
 
-    #evaluate()
 
 if __name__ == "__main__":
     main()
