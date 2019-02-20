@@ -2,6 +2,7 @@ import argparse
 from core.solver import CaptioningSolver
 from core.model import CaptionGenerator
 from core.dataset import CocoCaptionDataset
+from core.utils import load_json
 
 parser = argparse.ArgumentParser()
 
@@ -30,9 +31,9 @@ parser.add_argument('--batch_size', type=int, default=128, help='Number of examp
 def main():
     args = parser.parse_args()
     # load dataset and vocab
-    test_data = CocoCaptionDataset(args.image_id_file,
+    test_data = CocoCaptionDataset(args.image_info_file,
                                   concept_file=args.concept_file, split='test')
-    word_to_idx = train_data.get_vocab_dict()
+    word_to_idx = load_json(args.word_to_idx_dict)
     # load val dataset to print out scores every epoch
 
     model = CaptionGenerator(feature_dim=[args.image_feature_size, args.image_feature_depth], 
