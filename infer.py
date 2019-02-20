@@ -1,10 +1,3 @@
-import cPickle as pickle
-from tensorflow import flags
-from core.solver import CaptioningSolver
-from core.model import CaptionGenerator
-from core.utils import load_coco_data
-from core.utils import evaluate
-
 import argparse
 from core.solver import CaptioningSolver
 from core.model import CaptionGenerator
