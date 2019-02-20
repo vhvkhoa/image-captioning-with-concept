@@ -46,7 +46,7 @@ def main():
                                     checkpoint=args.test_checkpoint, device=args.device,
                                     is_test=True)
 
-    solver.test(data, test_dataset=test_data)
+    solver.test(test_data)
 
 
 if __name__ == "__main__":
