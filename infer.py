@@ -22,6 +22,7 @@ parser.add_argument('--ctx2out', action='store_true', default=True, help='Link c
 parser.add_argument('--enable_selector', action='store_true', default=True, help='Enable selector to determine how much important the image context is at every time step.')
 
 """Other parameters"""
+parser.add_argument('--split', type=str, default='test', help='Split name to read features from.')
 parser.add_argument('--device', type=str, default='cuda:0', help='Device to be used for training model.')
 parser.add_argument('--att_vis', action='store_true', default=False, help='Attention visualization, will show attention masks of every word.') 
 parser.add_argument('--image_info_file', type=str, default='./data/val/captions_val2017.json', help='Path to json file contained image ids and names')
@@ -32,7 +33,7 @@ def main():
     args = parser.parse_args()
     # load dataset and vocab
     test_data = CocoCaptionDataset(args.image_info_file,
-                                  concept_file=args.concept_file, split='test')
+                                  concept_file=args.concept_file, split=args.split)
     word_to_idx = load_json(args.word_to_idx_dict)
     # load val dataset to print out scores every epoch
 
