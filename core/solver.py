@@ -62,13 +62,15 @@ class CaptioningSolver(object):
         self.device = kwargs.pop('device', 'cuda:0')
         self.capture_scores = kwargs.pop('capture_scores', ['bleu_1', 'bleu_4', 'cider'])
 
+        self.is_test = kwargs.pop('is_test', False)
+
         self.beam_decoder = BeamSearchDecoder(self.model, self.device, self.beam_size, len(self.idx_to_word), self._start, self._end, self.n_time_steps)
 
         self.train_engine = Engine(self._train)
         self.test_engine = Engine(self._test)
 
         if self.checkpoint != None:
-            self._load(self.checkpoint)
+            self._load(self.checkpoint, is_test=self.is_test)
         else:
             self.start_iter = 0
             self.init_best_scores = {score_name: 0. for score_name in self.capture_scores}
@@ -116,10 +118,11 @@ class CaptioningSolver(object):
         print('-'*25)
         torch.save(model_dict, os.path.join(self.checkpoint_dir, model_name))
 
-    def _load(self, model_path):
+    def _load(self, model_path, is_test=False):
         checkpoint = torch.load(model_path)
         self.model.load_state_dict(checkpoint['model_state_dict'])
-        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        if not is_test:
+            self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         self.start_iter = checkpoint['iteration']
         self.init_best_scores = {score_name: checkpoint[score_name]
                                 for score_name in self.capture_scores}

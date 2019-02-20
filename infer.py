@@ -41,8 +41,10 @@ def main():
                                     hidden_dim=args.lstm_hidden_size, prev2out=args.prev2out, len_vocab=len(word_to_idx),
                                     ctx2out=args.ctx2out, enable_selector=args.enable_selector, dropout=args.dropout).to(device=args.device)
 
-    solver = CaptioningSolver(model, word_to_idx, n_time_steps=args.time_steps, batch_size=args.batch_size,
-                                    beam_size=args.beam_size, checkpoint=args.test_checkpoint, device=args.device)
+    solver = CaptioningSolver(model, word_to_idx, n_time_steps=args.time_steps, 
+                                    batch_size=args.batch_size, beam_size=args.beam_size, 
+                                    checkpoint=args.test_checkpoint, device=args.device,
+                                    is_test=True)
 
     solver.test(data, test_dataset=test_data)
 
