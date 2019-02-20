@@ -101,7 +101,7 @@ class CaptioningSolver(object):
         self.test_engine = Engine(self._test)
 
         self.test_engine.add_event_handler(Events.EPOCH_STARTED, self.testing_start_epoch_handler)
-        self.test_engine.add_event_handler(Events.EPOCH_COMPLETED, self.testing_end_epoch_handler, True)    
+        self.test_engine.add_event_handler(Events.EPOCH_COMPLETED, self.testing_end_epoch_handler, self.is_test)    
 
     def _save(self, epoch, iteration, loss, best_scores, prefix='epoch'):
         model_name =  'model_' + prefix + '.pth'
@@ -237,9 +237,11 @@ class CaptioningSolver(object):
     def testing_start_epoch_handler(self, engine):
         engine.state.captions = []
 
-    def testing_end_epoch_handler(self, engine, is_val):
+    def testing_end_epoch_handler(self, engine, is_test):
         captions = engine.state.captions
-        if is_val: 
+        if is_test: 
+            save_json(captions, './data/test/test.candidate.captions.json')
+        else:
             cap_path = './data/%s/%s.candidate.captions.json' % ('val', 'val')
             save_json(captions, cap_path)
             print('-'*25)
@@ -248,8 +250,6 @@ class CaptioningSolver(object):
                 print(metric, ': ', score)
             print('-'*25)
             engine.state.scores = caption_scores
-        else:
-            save_json(captions, './data/test/test.candidate.captions.json')
 
     def _test(self, engine, batch):
         self.model.eval()
