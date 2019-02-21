@@ -52,8 +52,6 @@ def main():
 
     if args.split == 'val':
         scores = evaluate(candidate_path=args.results_path, get_scores=True)
-        for metric, score in scores:
-            print(metric + ':', score)
 
 
 if __name__ == "__main__":
