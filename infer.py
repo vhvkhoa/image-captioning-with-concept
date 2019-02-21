@@ -16,6 +16,7 @@ parser.add_argument('--lstm_hidden_size', type=int, default=1536, help='Hidden l
 parser.add_argument('--time_steps', type=int, default=31, help='Number of time steps to be iterating through.')
 parser.add_argument('--embed_dim', type=int, default=512, help='Embedding space size for embedding tokens.')
 parser.add_argument('--beam_size', type=int, default=3, help='Beam size for inference phase.')
+parser.add_argument('--length_norm', type=float, default=0.5, help='Coefficient for length normalization')
 parser.add_argument('--dropout', type=float, default=0.5, help='Dropout portion.')
 parser.add_argument('--prev2out', action='store_true', default=True, help='Link previous hidden state to output.')
 parser.add_argument('--ctx2out', action='store_true', default=True, help='Link context features to output.')
@@ -43,8 +44,8 @@ def main():
                                     hidden_dim=args.lstm_hidden_size, prev2out=args.prev2out, len_vocab=len(word_to_idx),
                                     ctx2out=args.ctx2out, enable_selector=args.enable_selector, dropout=args.dropout).to(device=args.device)
 
-    solver = CaptioningSolver(model, word_to_idx, n_time_steps=args.time_steps, 
-                                    batch_size=args.batch_size, beam_size=args.beam_size, 
+    solver = CaptioningSolver(model, word_to_idx, n_time_steps=args.time_steps, batch_size=args.batch_size, 
+                                    beam_size=args.beam_size, length_norm=args.length_norm,
                                     checkpoint=args.test_checkpoint, device=args.device,
                                     is_test=True, results_path=args.results_path)
 

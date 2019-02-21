@@ -52,6 +52,7 @@ class CaptioningSolver(object):
         self.n_time_steps = kwargs.pop('n_time_steps', 31)
         self.batch_size = kwargs.pop('batch_size', 100)
         self.beam_size = kwargs.pop('beam_size', 3)
+        self.length_norm = kwargs.pop('length_norm', 0.5)
         self.update_rule = kwargs.pop('optimizer', 'adam')
         self.learning_rate = kwargs.pop('learning_rate', 0.01)
         self.metric = kwargs.pop('metric', 'CIDEr')
@@ -66,7 +67,7 @@ class CaptioningSolver(object):
 
         self.is_test = train_dataset == None and val_dataset == None
 
-        self.beam_decoder = BeamSearchDecoder(self.model, self.device, self.beam_size, len(self.idx_to_word), self._start, self._end, self.n_time_steps)
+        self.beam_decoder = BeamSearchDecoder(self.model, self.device, self.beam_size, len(self.idx_to_word), self._start, self._end, self.n_time_steps, self.length_norm)
 
         if self.checkpoint != None:
             self._load(self.checkpoint, is_test=self.is_test)
