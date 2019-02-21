@@ -120,9 +120,9 @@ class CaptioningSolver(object):
         for metric, score in best_scores.items():
             model_dict[metric] = score
         
-        print('-'*25)
+        print('-'*40)
         print('Saved ' + model_name)
-        print('-'*25)
+        print('-'*40)
         torch.save(model_dict, os.path.join(self.checkpoint_dir, model_name))
 
     def _load(self, model_path, is_test=False):
@@ -134,19 +134,20 @@ class CaptioningSolver(object):
         self.init_best_scores = {score_name: checkpoint[score_name]
                                 for score_name in self.capture_scores}
 
-        print('-'*25 + '\nLoaded checkpoint: ' + model_path)
+        print('-'*40 + '\nLoaded checkpoint: ' + model_path)
         print('Checkpoint info:\n\tEpoch: %d\n\tIteration: %d' % (checkpoint['epoch'], checkpoint['iteration']))
         print('\t', self.init_best_scores, sep='')
+        print('-'*40)
 
 
     def training_start_handler(self, engine):
         engine.state.iteration = self.start_iter
         engine.state.epoch = int(self.start_iter // len(self.train_loader))
         engine.state.best_scores = self.init_best_scores
-        print('-'*25)
+        print('-'*40)
         print('Start training at Epoch %d - Iteration %d' % (engine.state.epoch+1, engine.state.iteration+1))
         print('Number of iterations per epoch: %d' % len(self.train_loader))
-        print('-'*25)
+        print('-'*40)
 
     def training_end_iter_handler(self, engine):
         iteration = engine.state.iteration
@@ -171,9 +172,9 @@ class CaptioningSolver(object):
         epoch = engine.state.epoch
         loss, acc= engine.state.output
 
-        print('-'*25)
+        print('-'*40)
         print('Complete Epoch: {}, Loss:{}, Accuracy:{}'.format(epoch, loss, acc))
-        print('-'*25)
+        print('-'*40)
         self.writer.add_scalar('Loss', loss, iteration)
         self.writer.add_scalar('Accuracy', acc, iteration)
 
@@ -245,11 +246,11 @@ class CaptioningSolver(object):
     def testing_end_epoch_handler(self, engine, is_test):
         save_json(engine.state.captions, self.results_path)
         if not is_test:
-            print('-'*25)
+            print('-'*40)
             caption_scores = evaluate(candidate_path=self.results_path, get_scores=True)
             for metric, score in caption_scores.items():
                 print(metric, ': ', score)
-            print('-'*25)
+            print('-'*40)
             engine.state.scores = caption_scores
 
     def _test(self, engine, batch):
