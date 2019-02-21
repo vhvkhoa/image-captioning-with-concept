@@ -269,5 +269,4 @@ class CaptioningSolver(object):
             return test_state.scores
         else:
             self.test_loader = DataLoader(test_dataset, batch_size=self.batch_size, num_workers=4)
-            self.results_path = os.path.join('data', self.test_loader.split, 'captions_results.json')
             self.test_engine.run(self.test_loader)

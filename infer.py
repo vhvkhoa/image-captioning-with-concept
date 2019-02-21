@@ -28,7 +28,7 @@ parser.add_argument('--att_vis', action='store_true', default=False, help='Atten
 parser.add_argument('--split', type=str, default='test', help='Split name to read features from.')
 parser.add_argument('--image_info_file', type=str, default='./data/annotations/image_info_test2014.json', help='Path to json file contained image ids and names')
 parser.add_argument('--concept_file', type=str, default='./data/test/test_concepts.json', help='Path to json file contained concepts extracted by some detection models.')
-parser.add_argument('--results_path', type=str, default='./val/captions_test2014_results.json')
+parser.add_argument('--results_path', type=str, default='./test/captions_test2014_results.json')
 
 def main():
     args = parser.parse_args()
