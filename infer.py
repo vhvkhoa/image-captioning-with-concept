@@ -16,7 +16,7 @@ parser.add_argument('--lstm_hidden_size', type=int, default=1536, help='Hidden l
 parser.add_argument('--time_steps', type=int, default=31, help='Number of time steps to be iterating through.')
 parser.add_argument('--embed_dim', type=int, default=512, help='Embedding space size for embedding tokens.')
 parser.add_argument('--beam_size', type=int, default=3, help='Beam size for inference phase.')
-parser.add_argument('--length_norm', type=float, default=0.5, help='Coefficient for length normalization')
+parser.add_argument('--length_norm', type=float, default=0.4, help='Coefficient for length normalization')
 parser.add_argument('--dropout', type=float, default=0.5, help='Dropout portion.')
 parser.add_argument('--prev2out', action='store_true', default=True, help='Link previous hidden state to output.')
 parser.add_argument('--ctx2out', action='store_true', default=True, help='Link context features to output.')
@@ -29,7 +29,7 @@ parser.add_argument('--att_vis', action='store_true', default=False, help='Atten
 parser.add_argument('--split', type=str, default='test', help='Split name to read features from.')
 parser.add_argument('--image_info_file', type=str, default='./data/annotations/image_info_test2014.json', help='Path to json file contained image ids and names')
 parser.add_argument('--concept_file', type=str, default='./data/test/test_concepts.json', help='Path to json file contained concepts extracted by some detection models.')
-parser.add_argument('--results_path', type=str, default='./test/captions_test2014_results.json')
+parser.add_argument('--results_path', type=str, default='./data/test/captions_test2014_results.json')
 
 def main():
     args = parser.parse_args()
