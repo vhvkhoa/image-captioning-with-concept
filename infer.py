@@ -22,12 +22,13 @@ parser.add_argument('--ctx2out', action='store_true', default=True, help='Link c
 parser.add_argument('--enable_selector', action='store_true', default=True, help='Enable selector to determine how much important the image context is at every time step.')
 
 """Other parameters"""
-parser.add_argument('--split', type=str, default='test', help='Split name to read features from.')
 parser.add_argument('--device', type=str, default='cuda:0', help='Device to be used for training model.')
-parser.add_argument('--att_vis', action='store_true', default=False, help='Attention visualization, will show attention masks of every word.') 
-parser.add_argument('--image_info_file', type=str, default='./data/val/captions_val2017.json', help='Path to json file contained image ids and names')
-parser.add_argument('--concept_file', type=str, default='./data/val/val_concepts.json', help='Path to json file contained concepts extracted by some detection models.')
 parser.add_argument('--batch_size', type=int, default=128, help='Number of examples per mini-batch.')
+parser.add_argument('--att_vis', action='store_true', default=False, help='Attention visualization, will show attention masks of every word.') 
+parser.add_argument('--split', type=str, default='test', help='Split name to read features from.')
+parser.add_argument('--image_info_file', type=str, default='./data/annotations/image_info_test2014.json', help='Path to json file contained image ids and names')
+parser.add_argument('--concept_file', type=str, default='./data/test/test_concepts.json', help='Path to json file contained concepts extracted by some detection models.')
+parser.add_argument('--results_path', type=str, default='./val/captions_test2014_results.json')
 
 def main():
     args = parser.parse_args()
@@ -45,7 +46,7 @@ def main():
     solver = CaptioningSolver(model, word_to_idx, n_time_steps=args.time_steps, 
                                     batch_size=args.batch_size, beam_size=args.beam_size, 
                                     checkpoint=args.test_checkpoint, device=args.device,
-                                    is_test=True)
+                                    is_test=True, results_path=args.results_path)
 
     solver.test(test_data)
 

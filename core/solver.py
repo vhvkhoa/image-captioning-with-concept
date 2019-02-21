@@ -62,6 +62,7 @@ class CaptioningSolver(object):
         self.checkpoint = kwargs.pop('checkpoint', None)
         self.device = kwargs.pop('device', 'cuda:0')
         self.capture_scores = kwargs.pop('capture_scores', ['bleu_1', 'bleu_4', 'cider'])
+        self.results_path = kwargs.pop('results_path', 'data/val/captions_val_results.json')
 
         self.is_test = train_dataset == None and val_dataset == None
 
@@ -242,13 +243,10 @@ class CaptioningSolver(object):
         engine.state.captions = []
 
     def testing_end_epoch_handler(self, engine, is_test):
-        captions = engine.state.captions
-        if is_test: 
-            save_json(captions, self.results_path)
-        else:
-            save_json(captions, './data/val/val.candidate.captions.json')
+        save_json(engine.state.captions, self.results_path)
+        if not is_test:
             print('-'*25)
-            caption_scores = evaluate(get_scores=True)
+            caption_scores = evaluate(candidate_path=self.results_path, get_scores=True)
             for metric, score in caption_scores.items():
                 print(metric, ': ', score)
             print('-'*25)
