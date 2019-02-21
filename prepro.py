@@ -29,8 +29,6 @@ parser.add_argument('-p', '--phases', type=str, default='train,val,test', help='
                                                 'Images of phase named <phase> should be placed in image/<phase>. '+
                                                 'By default, we pre-process all splits of COCO-dataset.(e.g \'train,val,test\')')
 
-parser.add_argument('-a', '--ann_files', type=str, default='')
-
 parser.add_argument('-b', '--batch_size', type=int, default=128, help='Batch size to be used for extracting features from images.')
 
 parser.add_argument('-m', '--max_length', type=int, default=30, help='Max length, only be used to pre-process captions in training split of dataset. \n'+

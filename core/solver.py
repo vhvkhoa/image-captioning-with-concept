@@ -3,6 +3,7 @@ from torch import optim, nn
 from torch.nn import functional as F
 from torch.utils.data import DataLoader
 from ignite.engine import Engine, Events
+from ignite.contrib.handlers.tqdm_logger import ProgressBar
 from tensorboardX import SummaryWriter
 
 import numpy as np
@@ -102,6 +103,9 @@ class CaptioningSolver(object):
 
         self.test_engine.add_event_handler(Events.EPOCH_STARTED, self.testing_start_epoch_handler)
         self.test_engine.add_event_handler(Events.EPOCH_COMPLETED, self.testing_end_epoch_handler, self.is_test)    
+
+        test_pbar = ProgressBar()
+        test_pbar.attach(self.test_engine)
 
     def _save(self, epoch, iteration, loss, best_scores, prefix='epoch'):
         model_name =  'model_' + prefix + '.pth'
@@ -240,10 +244,9 @@ class CaptioningSolver(object):
     def testing_end_epoch_handler(self, engine, is_test):
         captions = engine.state.captions
         if is_test: 
-            save_json(captions, './data/test/test.candidate.captions.json')
+            save_json(captions, self.results_path)
         else:
-            cap_path = './data/%s/%s.candidate.captions.json' % ('val', 'val')
-            save_json(captions, cap_path)
+            save_json(captions, './data/val/val.candidate.captions.json')
             print('-'*25)
             caption_scores = evaluate(get_scores=True)
             for metric, score in caption_scores.items():
@@ -268,4 +271,5 @@ class CaptioningSolver(object):
             return test_state.scores
         else:
             self.test_loader = DataLoader(test_dataset, batch_size=self.batch_size, num_workers=4)
+            self.results_path = os.path.join('data', self.test_loader.split, 'captions_results.json')
             self.test_engine.run(self.test_loader)

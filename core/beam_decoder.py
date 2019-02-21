@@ -13,7 +13,9 @@ class BeamSearchDecoder(object):
         self.n_time_steps = n_time_steps
     
     def compute_score(self, logits, beam_scores):
-        return F.log_softmax(logits, dim=-1) + beam_scores.unsqueeze(-1)
+        print(logits.size(), beam_scores.size())
+        score = F.log_softmax(logits, dim=-1) + beam_scores.unsqueeze(-1)
+        return score
     
     def decode(self, features, tags):
         with torch.no_grad():
