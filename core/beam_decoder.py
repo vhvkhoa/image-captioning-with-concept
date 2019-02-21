@@ -14,9 +14,9 @@ class BeamSearchDecoder(object):
         self.length_norm = length_norm
 
     def compute_score(self, logits, beam_scores, time_step):
-        score = F.log_softmax(logits, dim=-1) + beam_scores.unsqueeze(-1)
         length_penalty = ((5. + time_step)**self.length_norm)/(6.**self.length_norm)
-        return score/length_penalty
+        score = F.log_softmax(logits, dim=-1) / length_penalty + beam_scores.unsqueeze(-1)
+        return score
 
     def decode(self, features, tags):
         with torch.no_grad():
