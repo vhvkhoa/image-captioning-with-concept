@@ -3,7 +3,7 @@ from torch.nn import functional as F
 import numpy as np
 
 class BeamSearchDecoder(object):
-    def __init__(self, model, device, beam_size, vocab_size, start_token, stop_token, n_time_steps):
+    def __init__(self, model, device, beam_size, vocab_size, start_token, stop_token, n_time_steps, length_norm):
         self.model = model
         self.device = device
         self.beam_size = beam_size
@@ -11,11 +11,14 @@ class BeamSearchDecoder(object):
         self._start = start_token
         self._end = stop_token
         self.n_time_steps = n_time_steps
-    
-    def compute_score(self, logits, beam_scores):
+        self.length_norm = length_norm
+
+    def compute_score(self, logits, beam_scores, time_step):
         score = F.log_softmax(logits, dim=-1) + beam_scores.unsqueeze(-1)
-        return score
-    
+        length_penalty = ((5. + time_step)**self.length_norm)/(6.**self.length_norm)
+        print(length_penalty)
+        return score/length_penalty
+
     def decode(self, features, tags):
         with torch.no_grad():
             features = features.to(device=self.device)
@@ -58,7 +61,7 @@ class BeamSearchDecoder(object):
                 beam_hidden_states = torch.stack(next_beam_hidden_states)
                 beam_cell_states = torch.stack(next_beam_cell_states)
 
-                symbols_scores = self.compute_score(beam_logits, beam_scores)
+                symbols_scores = self.compute_score(beam_logits, beam_scores, t)
                 end_scores = symbols_scores[:, :, self._end]
                 symbols_scores_no_end = torch.cat([symbols_scores[:, :, :self._end],
                                         symbols_scores[:, :, self._end + 1:]], 2).view(batch_size, -1)
