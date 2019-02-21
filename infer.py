@@ -51,7 +51,7 @@ def main():
     solver.test(test_data)
 
     if args.split == 'val':
-        scores = evaluate(candidate_path=args.results_path, get_scores=True)
+        evaluate(candidate_path=args.results_path)
 
 
 if __name__ == "__main__":
