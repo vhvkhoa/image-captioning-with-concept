@@ -13,7 +13,6 @@ class BeamSearchDecoder(object):
         self.n_time_steps = n_time_steps
     
     def compute_score(self, logits, beam_scores):
-        print(logits.size(), beam_scores.size())
         score = F.log_softmax(logits, dim=-1) + beam_scores.unsqueeze(-1)
         return score
     
