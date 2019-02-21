@@ -2,7 +2,7 @@ import argparse
 from core.solver import CaptioningSolver
 from core.model import CaptionGenerator
 from core.dataset import CocoCaptionDataset
-from core.utils import load_json
+from core.utils import load_json, evaluate
 
 parser = argparse.ArgumentParser()
 
@@ -49,6 +49,11 @@ def main():
                                     is_test=True, results_path=args.results_path)
 
     solver.test(test_data)
+
+    if args.split == 'val':
+        scores = evaluate(candidate_path=args.results_path, get_scores=True)
+        for metric, score in scores:
+            print(metric + ':', score)
 
 
 if __name__ == "__main__":
