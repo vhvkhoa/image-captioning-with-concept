@@ -13,7 +13,7 @@ ANN_DIR = 'data/annotations'
 ANN_FILES = {
     'train': 'captions_train2017.json',
     'val': 'captions_val2017.json',
-    'test': 'image_info_test2014.json'
+    'test': ''
 }
 CONCEPT_FILES = {
     'train': 'train_concepts.json',
@@ -46,7 +46,9 @@ parser.add_argument('-v', '--vocab_size', type=int, default=0,
 parser.add_argument('-e' '--encoder_name', type=str, default='resnet101', help='CNN model name used to extract features of images.'+
                                                              'It should be vgg or resnet followed by a number indicating number of layers in the model (e.g vgg16, vgg19, resnet50, resnet101).')
 
-parser.add_argument('-n', '--tag_names_file', type=str, default='data/9k.names')
+parser.add_argument('-n', '--tag_names_file', type=str, default='data/9k.names', help='Names of concepts used by Yolo9000.')
+
+parser.add_argument('-i', '--info_test', type=str, default='', help='JSON file contained info of test set, would be created if not given.')
 
 def _process_captions_data(phase, ann_file=None, max_length=None):
     if phase in ['val', 'train']:
@@ -160,6 +162,16 @@ def main():
     args = parser.parse_args()
     # phases to be processed.
     phases = [phase.strip() for phase in args.phases.split(',')]
+
+    # create info file for test set if required
+    ANN_FILES['test'] = args.info_test
+    if ANN_FILES['test'] == '' and 'test' in phases:
+        ANN_FILES['test'] = 'data/test/image_info.json'
+        image_info = {'images': []}
+        image_files = os.listdir('image/test/')
+        for i, image_file in range(image_files):
+            image_info['images'].append({'id': i, 'file_name': image_file})
+        save_json(image_info, ANN_FILES['test'])
 
     # annotation files and concept files to be processed
     ann_files = [os.path.join(ANN_DIR, ANN_FILES[phase]) for phase in phases]
