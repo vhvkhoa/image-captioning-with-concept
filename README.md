@@ -1,52 +1,40 @@
-# Show, Attend and Tell 
-<b> This code is based on the code of a github user [yunjey](https://github.com/yunjey/show-attend-and-tell)</b>. It is an attempt to reproduce the performance of the image captioning method proposed in [Show, Attend and Tell: Neural Image Caption Generation with Visual Attention](https://arxiv.org/pdf/1502.03044.pdf).
-
-***Update 09/17/2018**: Used raw_rnn instead of python's loop in training phase, which helps the training run much faster and not get OOM when increase LSTM's hidden state size. Added some flags for users to use the code easier.*
-
-## Some important modifications we made:
-
-- Changed the image-encoder to Resnet-101 by Pytorch, *you may want to take a look at [prepro.py](prepro.py) and modify line 197 to change the encoder to other CNN models*.
-
-- Fixed the evaluation code to get the right score on [MSCOCO dataset](http://cocodataset.org)'s offered validation set *(the [yunjey](https://github.com/yunjey/show-attend-and-tell)'s code pruned some sentences which don't satisfy some requirements, this leads to higher scores in evaluation phrase so we are not able to properly compare our model's performance to others)*.
-
-- Added beam-search to the inference phrase, this is a modification version of this [beam search](https://gist.github.com/nikitakit/6ab61a73b86c50ad88d409bac3c3d09f) algorithm, which improved the model's performance significantly compared to other versions of beam search.
-
-- Used [raw_rnn](https://www.tensorflow.org/api_docs/python/tf/nn/raw_rnn) instead of python's loop in training phase, which helps the training run much faster and not get OOM when increase LSTM's hidden state size.
+# Image Captioning with Concept
+<b> This project is based on soft-attention mechanism, which is applied on both spacial feature map extracted from the image by Resnet-101 and semantic features, which are most relevant tags extracted by YOLO-9000.
 
 ## Dependencies:
 
-- Python 2.7
-- tensorflow 1.4 (*Higher versions are currently not able to be used this code due to errors in beam search, we are working on it.*)
-- pytorch
+- Python 3.5
+- pytorch 1.0.0
 - torchvision
+- tensorboardX
 - skimage
 - tqdm
-- pandas
+- [coco-caption](https://github.com/tylin/coco-caption). There is some errors appear when using this repo along with our code due to confliction of Python versions, please check their issues tab or email us if needed.
+- [Yolo-9000](https://github.com/philipperemy/yolo-9000.git)
+- Some other small libraries haven't been listed, please feel free to install it if being required while running code.
 
 ## Getting Started:
 
-If you want to train or evaluate the models, you need to clone the repo of [pycocoevalcap](https://github.com/tylin/coco-caption), run this line in your $HOME directory containing this repo:
-
-```ruby
-$ git clone https://github.com/tylin/coco-caption.git
-```
+Before training or inference, you have to run Yolo-9000 on the directory containing images you want to use, the original code cannot be run automatically to extract tags from multiple images and save them into a file, please feel free to email us if you want to reproduce the results, we will upload our light additional source code we made to extract tags on multiple images and a tutorial for it when we have enough time.
 
 ### Training:
 
-In order to train the model, you need to download the dataset's images and annotations, run this line to download [MSCOCO](http://cocodataset.org) 2017 version's training, validation sets and 2014 testing set:
+In order to train the model, you need to download the dataset's images and annotations, you can mannually download them from [MSCOCO's site](http://cocodataset.org) or run below bash file to download training, validation and testing sets:
 
 ```ruby
 $ bash download.sh
 ```
 
-After that, preprocess the images and captions and then run training code, you're free to set configuration of the training phrase by modifying [train.py](train.py) file:
+We used the 2017 version's training and validation sets because they are splitted following the recommendations of some prior works, but if you want to submit the results to [evaluation site](https://competitions.codalab.org/competitions/3221), your model have to do inference on 2014 version's validation and testing sets.
+
+After having the dataset prepared, preprocess the images and captions and then run training code, you're free to set configuration of the training phrase by modifying [train.py](train.py) file:
 
 ```ruby
 $ python prepro.py
 $ python train.py
 ```
 
-Make sure that you have enough space in your drive, it would take about **125GB** after preprocessing.
+Make sure that you have enough space in your drive, it would take about **130GB** after preprocessing because the extracted features are big.
 
 While training, you can observe the process by tensorboard:
 
@@ -56,12 +44,12 @@ $ tensorboard --logdir=log/
 
 ### Evaluation and Inference:
 
-**TODO**: Make eval and inference code and document to them.
+Run the below line to to get help in inference, if you want results to be evaluated after inference (only if there are evaluation annotations), set the --split argument to val:
+
+```ruby
+$ python infer.py --help
+```
 
 ## References:
 
-The code we used as the backbone of our code: https://github.com/yunjey/show-attend-and-tell
-
-The code of beam-search: https://gist.github.com/nikitakit/6ab61a73b86c50ad88d409bac3c3d09f
-
-The authors' code: https://github.com/kelvinxu/arctic-captions 
+The code we used as the reference while building our code (we want to acknowledge the authors of this repo because we have borrowed some ideas from this repo on the first build that is the basement of this source code): https://github.com/yunjey/show-attend-and-tell
